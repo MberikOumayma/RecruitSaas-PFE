@@ -1,0 +1,38 @@
+@startuml Sprint4_UseCase
+skinparam shadowing false
+skinparam packageStyle rectangle
+title Cas d'utilisation — Sprint 4\nCandidatures et espace candidat
+
+actor "Candidat" as Candidat
+
+rectangle "TalentFlow — Sprint 4" {
+  package "Exploration des offres" #F0F9FF {
+    usecase (Consulter le\ntableau de bord) as UC1
+    usecase (Explorer les offres\npubliées) as UC2
+    usecase (Consulter le détail\nd'une offre) as UC3
+    usecase (Sauvegarder une offre\nen favori) as UC4
+  }
+  package "Candidature" #FFF7ED {
+    usecase (Postuler avec\nformulaire + CV) as UC5
+    usecase (Uploader le CV\nsur Cloudinary) as UC6
+  }
+  package "Profil et suivi" #ECFDF5 {
+    usecase (Gérer son profil\ncandidat) as UC7
+    usecase (Suivre le pipeline\ndes candidatures) as UC8
+  }
+}
+
+Candidat --> UC1
+Candidat --> UC2
+Candidat --> UC3
+Candidat --> UC4
+Candidat --> UC5
+Candidat --> UC7
+Candidat --> UC8
+
+UC5 ..> UC3 : <<include>>
+UC5 ..> UC6 : <<include>>
+UC4 ..> UC2 : <<extend>>
+UC8 ..> UC5 : <<extend>>
+
+@enduml

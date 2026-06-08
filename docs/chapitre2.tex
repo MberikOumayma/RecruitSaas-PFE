@@ -1,0 +1,613 @@
+\chapter{Analyse et Spécification des Besoins}
+
+\section*{Introduction}
+
+Ce chapitre constitue le fondement conceptuel de la plateforme TalentFlow. Nous
+identifions les acteurs du système et spécifions les besoins fonctionnels et non
+fonctionnels. Nous présentons ensuite le diagramme de cas d'utilisation global, le
+backlog du produit, le diagramme de classes et l'environnement de travail. Enfin,
+nous détaillons l'architecture globale de la plateforme et le sprint backlog général.
+
+% ============================================================
+\section{Identification des Acteurs de Notre Application}
+% ============================================================
+
+La plateforme TalentFlow implique cinq catégories d'acteurs humains et un acteur système.
+Le tableau~\ref{tab:acteurs} présente leurs responsabilités principales.
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.6}
+\begin{tabular}{|p{3cm}|p{3.5cm}|p{6.5cm}|}
+\hline
+\textbf{Acteur} & \textbf{Nature} & \textbf{Responsabilités principales} \\
+\hline
+\textbf{Guest} & Utilisateur non authentifié & Accès public, consultation des offres, soumission d'une candidature avec upload de CV. \\
+\hline
+\textbf{Candidat} & Utilisateur authentifié & Gestion du profil (\texttt{CandidateProfile}), sauvegarde d'offres (\texttt{SavedJob}), suivi des candidatures, passage des quiz et entretiens virtuels. \\
+\hline
+\textbf{Membre (Expert)} & Collaborateur RH du tenant & Consultation des candidatures assignées (\texttt{AssignationExpert}), évaluation (\texttt{AvisExpert}), consultation des résultats quiz et entretiens. \\
+\hline
+\textbf{Tenant (Recruteur)} & Entreprise cliente & Gestion des offres, candidatures, membres et entreprises ; planification des quiz et entretiens ; consultation des rapports IA. \\
+\hline
+\textbf{Admin} & Acteur technique interne & Validation et supervision des tenants, tableau de bord global, gestion du profil administrateur. \\
+\hline
+\textbf{AI Service} & Acteur système (Python/FastAPI) & Extraction PDF (PyMuPDF), OCR Tesseract, NER RoBERTa, embeddings et similarité sémantique (Sentence Transformers), matching et classement (ChromaDB, FAISS), résumé et raisonnement LLM (Groq), scoring composite, génération de questions, évaluation sémantique, prédiction de fraude et rapports. \\
+\hline
+\end{tabular}
+\caption{Identification des acteurs de TalentFlow}
+\label{tab:acteurs}
+\end{table}
+
+% ============================================================
+\section{Étude des Besoins}
+% ============================================================
+
+\subsection{Les Besoins Fonctionnels}
+
+\subsubsection{Besoins Fonctionnels du Guest}
+
+\begin{itemize}
+    \item \textbf{Accès à la plateforme :} naviguer sur l'interface publique sans compte.
+    \item \textbf{Consultation des offres :} consulter les offres publiées (\texttt{EstPublie = true}).
+    \item \textbf{Soumission d'une candidature :} postuler via le formulaire personnalisé
+    (\texttt{FormulaireCandidature}) et uploader son CV sur Cloudinary (\texttt{CvUrl}).
+\end{itemize}
+
+\subsubsection{Besoins Fonctionnels du Candidat}
+
+\begin{itemize}
+    \item \textbf{Gestion du profil :} créer et mettre à jour son \texttt{CandidateProfile}
+    (compétences, expériences, formations, certifications, langues, CV, liens, avatar).
+
+    \item \textbf{Sauvegarde des offres :} sauvegarder des offres en favoris
+    (\texttt{SavedJob}) et recevoir des notifications (\texttt{CandidatNotification}).
+
+    \item \textbf{Suivi des candidatures :} consulter l'état de ses candidatures
+    (\texttt{Candidature.Statut}) depuis son tableau de bord.
+
+    \item \textbf{Passage du quiz technique :} accéder au quiz via \texttt{QuizToken},
+    répondre aux QCM dans le temps imparti (\texttt{TimePerQuestion}) et consulter
+    ses résultats (\texttt{QuizResult}).
+
+    \item \textbf{Passage de l'entretien virtuel :} confirmer un créneau
+    (\texttt{CreneauxDisponibles}), accéder via \texttt{LienToken} et interagir
+    oralement avec l'avatar recruteur.
+\end{itemize}
+
+\subsubsection{Besoins Fonctionnels du Membre (Expert)}
+
+\begin{itemize}
+    \item \textbf{Consultation des offres assignées :} accéder aux offres via
+    \texttt{AssignationExpert}.
+
+    \item \textbf{Évaluation des candidatures :} consulter les CV, scores IA et
+    résumés LLM dans \texttt{AnalyseCV} ; attribuer un score et rédiger un avis
+    (\texttt{AvisExpert}).
+
+    \item \textbf{Changement de statut :} modifier le statut d'une candidature.
+
+    \item \textbf{Consultation des résultats :} accéder aux \texttt{QuizResult} et
+    aux rapports \texttt{EntretienIA} incluant les indicateurs de fraude
+    (\texttt{AlertesSecurite}, \texttt{NbChangementsOnglet}, \texttt{VerificationFacialeOk}).
+\end{itemize}
+
+\subsubsection{Besoins Fonctionnels du Tenant (Recruteur)}
+
+\begin{itemize}
+    \item \textbf{Gestion des entreprises :} créer et gérer les entités
+    \texttt{Entreprise} (nom, secteur, RNE, logo).
+
+    \item \textbf{Gestion du profil tenant :} renseigner le \texttt{TenantProfile}
+    (titre, site web, réseaux sociaux, stack technique, statut de recrutement).
+
+    \item \textbf{Gestion des membres :} inviter des \texttt{Expert}, les assigner
+    à des offres (\texttt{AssignationExpert}).
+
+    \item \textbf{Gestion des offres :} créer et publier des \texttt{OffreEmploi} ;
+    personnaliser le formulaire de candidature (\texttt{FormulaireCandidature} /
+    \texttt{ChampPersonnalise} : Texte, Nombre, Date, ChoixMultiple, Fichier) ;
+    générer un lien public tokenisé (\texttt{PublicToken}).
+
+    \item \textbf{Gestion des candidatures :} suivre le pipeline, accéder aux
+    \texttt{AnalyseCV}, consulter les scores IA (matching sémantique, compétences,
+    expérience, raisonnement LLM) et classer les candidats par offre, changer les statuts.
+
+    \item \textbf{Planification du quiz :} paramétrer la date (\texttt{ScheduledDate}),
+    le minuteur (\texttt{TimePerQuestion}) et les consignes ; consulter les
+    \texttt{QuizResult}.
+
+    \item \textbf{Planification de l'entretien :} définir les créneaux, activer le
+    \texttt{LienToken} ; consulter le \texttt{RapportIA} avec indicateurs de fraude.
+
+    \item \textbf{Rapports et exports :} générer des rapports détaillés ; exporter
+    en PDF, Excel et Word.
+\end{itemize}
+
+\subsubsection{Besoins Fonctionnels de l'Admin}
+
+\begin{itemize}
+    \item \textbf{Gestion des tenants :} valider, approuver, rejeter ou suspendre les comptes
+    tenants (\texttt{Tenant.Statut} : Pending, Approved, Rejected).
+    \item \textbf{Administration de la plateforme :} consulter le tableau de bord global,
+    gérer son profil administrateur et modifier son mot de passe.
+\end{itemize}
+
+\subsection{Les Besoins Non Fonctionnels}
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.6}
+\begin{tabular}{|p{3cm}|p{10cm}|}
+\hline
+\textbf{Critère} & \textbf{Exigence} \\
+\hline
+\textbf{Performance} & Réponse APIs $<$ 200ms. Analyse CV complète $<$ 30s.
+Rendu 3D avatar à 60 FPS. \\
+\hline
+\textbf{Sécurité} & Authentification JWT. Chiffrement AES-256 (repos) et TLS 1.3 (transit).
+Isolation logique par tenant. Accès quiz/entretien par tokens opaques.
+Détection de fraude comportementale via TensorFlow.js et vérification faciale
+(\texttt{AlertesSecurite}, \texttt{NbChangementsOnglet}, \texttt{VerificationFacialeOk}). \\
+\hline
+\textbf{Scalabilité} & Architecture modulaire. Conteneurisation Docker pour la montée
+en charge horizontale. \\
+\hline
+\textbf{Disponibilité} & SLA 99,9\%. Reprise sur erreur pour le service IA Python/FastAPI. \\
+\hline
+\textbf{Maintenabilité} & Séparation claire des responsabilités. Documentation complète
+des APIs. Pipeline CI/CD via GitHub Actions. \\
+\hline
+\textbf{Accessibilité} & Interface responsive desktop et mobile. Support FR et EN. \\
+\hline
+\textbf{Conformité RGPD} & Consentement avant enregistrement. Droit à l'effacement.
+Minimisation des données. \\
+\hline
+\end{tabular}
+\caption{Besoins non fonctionnels de TalentFlow}
+\label{tab:nfr}
+\end{table}
+
+% ============================================================
+\section{Diagramme de Cas d'Utilisation Global}
+% ============================================================
+
+Le diagramme de cas d'utilisation global (figure~\ref{fig:uc_global}) illustre les
+interactions entre les cinq acteurs humains et l'acteur système AI Service. On y distingue :
+
+\begin{itemize}
+    \item Les fonctionnalités du Guest : accès plateforme, consultation des offres,
+    soumission d'une candidature (\textit{Apply for an offer}, incluant \textit{Upload CV}).
+
+    \item Les fonctionnalités du Candidat authentifié : gestion du profil, sauvegarde
+    d'offres, suivi des candidatures, passage du quiz et de l'entretien virtuel.
+
+    \item Les fonctionnalités du Membre : consultation des offres et candidatures assignées,
+    scoring (\textit{Score candidate}), changement de statut, consultation des rapports.
+
+    \item Les fonctionnalités du Tenant : gestion des offres (\textit{Manage offers}) avec
+    personnalisation du formulaire et assignation de membres, planification des quiz et
+    entretiens, gestion des candidatures.
+
+    \item Les fonctionnalités de l'Admin : gestion des tenants et supervision de la plateforme.
+
+    \item Les services de l'AI Service : extraction du texte des CV (PyMuPDF, complément
+    OCR Tesseract si pages scannées), extraction structurée NER, similarité sémantique
+    (Sentence Transformers), matching et classement (ChromaDB, FAISS), résumé et scoring
+    via LLM (Groq), génération des questions de quiz et d'entretien, évaluation des
+    réponses, prédiction de fraude et génération des rapports.
+\end{itemize}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/usecase_diagram.png}
+    \caption{Diagramme de cas d'utilisation global de TalentFlow}
+    \label{fig:uc_global}
+\end{figure}
+
+% ============================================================
+\section{Backlog du Produit}
+% ============================================================
+
+Le product backlog regroupe l'ensemble des fonctionnalités attendues de TalentFlow,
+exprimées sous forme de user stories et priorisées selon leur valeur métier. Le
+tableau~\ref{tab:backlog} présente le backlog réparti sur 8 sprints (Sprint 0 à Sprint 7).
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{|c|p{8.5cm}|c|c|}
+\hline
+\textbf{ID} & \textbf{User Story} & \textbf{Priorité} & \textbf{Sprint} \\
+\hline
+US00 & En tant qu'équipe, nous voulons réaliser l'apprentissage technologique, concevoir
+le design system, les maquettes UI/UX, la modélisation UML et le schéma de base de données
+PostgreSQL. & Haute & 0 \\
+\hline
+US01 & En tant qu'administrateur, je veux mettre en place l'infrastructure multi-tenant
+avec isolation logique des données par tenant. & Haute & 1 \\
+\hline
+US02 & En tant qu'administrateur, je veux gérer les comptes utilisateurs et les rôles
+(Admin, Tenant, Expert, Candidat). & Haute & 1 \\
+\hline
+US03 & En tant qu'administrateur, je veux valider et configurer les tenants pour assurer
+leur onboarding sur la plateforme. & Haute & 2 \\
+\hline
+US04 & En tant que tenant, je veux gérer les experts (\texttt{Expert}) et les entreprises
+(\texttt{Entreprise}) de mon espace. & Haute & 2 \\
+\hline
+US05 & En tant que tenant, je veux créer et publier une offre d'emploi (\texttt{OffreEmploi})
+afin d'attirer des candidats qualifiés. & Haute & 3 \\
+\hline
+US06 & En tant que tenant, je veux personnaliser le formulaire de candidature
+(\texttt{FormulaireCandidature} / \texttt{ChampPersonnalise}) et générer un lien
+public tokenisé (\texttt{PublicToken}). & Haute & 3 \\
+\hline
+US07 & En tant que guest ou candidat, je veux accéder à l'interface publique des offres
+et soumettre ma candidature avec mon CV (hébergé sur Cloudinary). & Haute & 4 \\
+\hline
+US08 & En tant que tenant ou membre, je veux suivre le pipeline des candidatures reçues
+et consulter les profils soumis. & Haute & 4 \\
+\hline
+US09 & En tant que système, je veux extraire le texte des CV (PyMuPDF sur PDF natif,
+OCR Tesseract sur les zones scannées), puis les informations structurées via NER RoBERTa,
+persistées dans \texttt{AnalyseCV}. & Haute & 5 \\
+\hline
+US10 & En tant que système, je veux générer un résumé LLM (Groq), calculer la similarité
+sémantique CV/offre (Sentence Transformers), produire un score composite (compétences,
+expérience, raisonnement LLM) et classer les candidats (ChromaDB, FAISS), via le service
+Python/FastAPI. & Haute & 5 \\
+\hline
+US11 & En tant que tenant, je veux planifier un quiz technique généré par IA, accessible
+via \texttt{QuizToken}, avec résultats (\texttt{QuizResult}) et indicateurs de fraude
+consultables. & Haute & 6 \\
+\hline
+US12 & En tant que tenant, je veux générer un rapport d'entretien IA exportable en PDF et
+exporter les données agrégées en Excel et Word. & Moyenne & 6 \\
+\hline
+US13 & En tant que candidat, je veux passer un entretien virtuel immersif avec un avatar
+3D animé, interagir vocalement (TTS/STT) et recevoir une évaluation sémantique automatique. & Moyenne & 7 \\
+\hline
+US14 & En tant que système, je veux détecter les anomalies comportementales en temps réel
+(changement d'onglet, absence caméra, vérification faciale) lors des quiz
+et entretiens, et les intégrer aux rapports (\texttt{AlertesSecurite},
+\texttt{NbChangementsOnglet}, \texttt{VerificationFacialeOk}). & Haute & 7 \\
+\hline
+US15 & En tant que tenant, je veux planifier les entretiens virtuels (créneaux,
+\texttt{LienToken}) et déployer la plateforme via Docker et CI/CD (GitHub Actions). & Moyenne & 7 \\
+\hline
+\end{tabular}
+\caption{Backlog du produit TalentFlow}
+\label{tab:backlog}
+\end{table}
+
+% ============================================================
+\section{Diagramme de Classes}
+% ============================================================
+
+Le diagramme de classes (figure~\ref{fig:classes}) modélise la structure statique de
+TalentFlow. Les principales entités sont :
+
+\begin{itemize}
+    \item \textbf{Utilisateur :} entité centrale avec rôle (\texttt{RoleUtilisateur} :
+    Admin, Tenant, Expert, Candidat), informations d'identité et d'authentification
+    externe (\texttt{ExternalId}, \texttt{AuthProvider}).
+
+    \item \textbf{Tenant :} lié à un \texttt{Utilisateur}, porte un statut
+    (\texttt{TenantStatus} : Pending, Approved, Rejected) et possède un
+    \texttt{TenantProfile} (titre, réseaux sociaux, stack technique, statut de recrutement, logo).
+
+    \item \textbf{Expert :} collaborateur RH d'un tenant et d'une entreprise, avec rôle
+    (\texttt{ExpertRole} : Evaluator, SeniorEvaluator, Manager) et statut (\texttt{ExpertStatus}).
+
+    \item \textbf{Entreprise :} société rattachée à un tenant (nom, secteur, RNE, logo).
+
+    \item \textbf{OffreEmploi :} offre publiée par une entreprise avec type de contrat
+    (\texttt{TypeContrat} : CDI, CDD, Freelance, Stage, Alternance, Intérim), token public
+    (\texttt{PublicToken}) et date limite de candidature.
+
+    \item \textbf{FormulaireCandidature / ChampPersonnalise :} formulaire configurable
+    avec champs de types : Texte, Nombre, Date, ChoixMultiple, Fichier.
+
+    \item \textbf{Candidat :} lié à un \texttt{Utilisateur}, possède un
+    \texttt{CandidateProfile} (compétences, expériences, formations, certifications,
+    langues, CV, avatar, token quiz).
+
+    \item \textbf{SavedJob :} offre sauvegardée en favori par un candidat.
+
+    \item \textbf{Candidature :} soumission pour une offre, portant le CV (\texttt{CvUrl})
+    et les réponses au formulaire (\texttt{FormulaireResponses}).
+
+    \item \textbf{AnalyseCV :} résultat IA : texte extrait (\texttt{TexteExtrait}),
+    compétences, expériences, certifications, classification (détail du scoring),
+    score global (\texttt{Score}) et résumé LLM (\texttt{Resume}).
+
+    \item \textbf{Quiz :} quiz technique avec \texttt{QuizToken}, questions JSON générées
+    par IA, minuteur et date de planification.
+
+    \item \textbf{QuizResult :} résultat : score, total, pourcentage, grade, réponses
+    (\texttt{AnswersJson}) et temps par question (\texttt{TimeSpentJson}).
+
+    \item \textbf{EntretienIA :} entretien avec créneaux disponibles (\texttt{CreneauxDisponibles}),
+    \texttt{LienToken}, score et indicateurs de sécurité : \texttt{AlertesSecurite},
+    \texttt{NbChangementsOnglet}, \texttt{DureeMinutes}, \texttt{VerificationFacialeOk}
+    et rapport IA final (\texttt{RapportIA}).
+
+    \item \textbf{AvisExpert :} évaluation d'un membre sur une candidature (score et
+    commentaire).
+
+    \item \textbf{AssignationExpert :} association Expert — OffreEmploi pour délégation
+    de l'évaluation.
+
+    \item \textbf{Notification / CandidatNotification :} notifications destinées aux
+    experts et aux candidats.
+\end{itemize}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{images/DiagrammeClasses_PFE.png}
+    \caption{Diagramme de classes de TalentFlow}
+    \label{fig:classes}
+\end{figure}
+
+% ============================================================
+\section{Environnement de Travail dans ce Stage}
+% ============================================================
+
+\subsection{Frameworks et Langages Utilisés}
+
+Le tableau~\ref{tab:frameworks} présente les technologies principales utilisées pour
+le développement de TalentFlow.
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{|p{3cm}|p{3cm}|p{7cm}|}
+\hline
+\textbf{Technologie} & \textbf{Version} & \textbf{Rôle} \\
+\hline
+Vue.js & 3.x & Framework frontend JavaScript (Vite, composition API). \\
+\hline
+.NET / C\# & .NET 10 & Framework backend pour les APIs RESTful (ASP.NET Core). \\
+\hline
+Python / FastAPI & 3.11+ & Microservice IA : orchestration des pipelines NLP et exposition REST. \\
+\hline
+PostgreSQL & 15+ & Base de données relationnelle avec isolation multi-tenant. \\
+\hline
+PyMuPDF (fitz) & 1.24+ & Extraction du texte natif des fichiers PDF. \\
+\hline
+Tesseract OCR & 5.x & Reconnaissance optique sur pages ou zones PDF scannées. \\
+\hline
+spaCy / RoBERTa & 3.x & NER fine-tuné pour l'extraction structurée des CV. \\
+\hline
+Sentence Transformers & 3.x & Embeddings et similarité sémantique CV $\leftrightarrow$ offre
+(\textit{paraphrase-multilingual-MiniLM-L12-v2}). \\
+\hline
+ChromaDB & 0.5+ & Base vectorielle pour la persistance et la recherche de profils candidats. \\
+\hline
+FAISS & 1.8+ & Indexation et classement rapide des candidats par offre. \\
+\hline
+Groq API & --- & LLM pour résumé de profil, raisonnement du score et génération de contenus IA. \\
+\hline
+Three.js & 0.170+ & Moteur de rendu 3D WebGL pour l'avatar recruteur virtuel. \\
+\hline
+TensorFlow.js & 4.x & Détection de signaux comportementaux en temps réel côté client. \\
+\hline
+Docker & 24+ & Conteneurisation de l'ensemble des composants de la plateforme. \\
+\hline
+\end{tabular}
+\caption{Frameworks et langages utilisés}
+\label{tab:frameworks}
+\end{table}
+
+\subsection{Environnement Logiciel}
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{|p{4cm}|p{9cm}|}
+\hline
+\textbf{Outil} & \textbf{Usage} \\
+\hline
+Visual Studio 2022 & IDE principal pour le développement de l'API .NET (C\#). \\
+\hline
+Visual Studio Code & Éditeur pour le frontend Vue.js, le service Python/FastAPI et les fichiers de configuration. \\
+\hline
+GitHub & Gestion du code source, versioning et collaboration. \\
+\hline
+GitHub Actions & Pipeline CI/CD pour l'automatisation des builds et des déploiements. \\
+\hline
+Docker Desktop & Conteneurisation et orchestration locale des services. \\
+\hline
+Postman & Test et documentation des APIs RESTful. \\
+\hline
+pgAdmin & Administration et visualisation de la base de données PostgreSQL. \\
+\hline
+Ready Player Me & Conception des avatars 3D exportés au format \texttt{.glb}. \\
+\hline
+Mixamo (Adobe) & Bibliothèque d'animations 3D (idle, gestes, transitions) pour l'avatar. \\
+\hline
+Cloudinary & Hébergement cloud des CV et médias des candidats. \\
+\hline
+\end{tabular}
+\caption{Environnement logiciel}
+\label{tab:logiciel}
+\end{table}
+
+\subsection{Exemple d'Utilisation}
+
+À titre d'illustration, voici le déroulement d'un cycle complet d'analyse de candidature
+sur TalentFlow :
+
+\begin{enumerate}
+    \item Un candidat postule à une offre via le lien public tokenisé et uploade son CV
+    (stocké sur Cloudinary).
+    \item L'API .NET enregistre la candidature et délègue le traitement au service IA Python.
+    \item Le service IA extrait d'abord le texte natif du PDF avec \textbf{PyMuPDF}. Si le
+    document contient des pages ou zones scannées sans texte sélectionnable, \textbf{Tesseract OCR}
+    complète l'extraction sur les images associées.
+    \item Le modèle \textbf{NER RoBERTa} (spaCy) structure les informations (compétences,
+    expériences, diplômes, certifications, langues).
+    \item \textbf{Sentence Transformers} calcule la similarité sémantique entre le profil
+    candidat et l'offre ; \textbf{ChromaDB} et \textbf{FAISS} permettent le matching
+    et le classement des candidatures pour une même offre.
+    \item Le LLM (\textbf{Groq}) génère un résumé professionnel et un score composite
+    (compétences, expérience, adéquation sémantique, raisonnement) ; les résultats sont
+    persistés dans \texttt{AnalyseCV}.
+    \item Le recruteur consulte le score et le résumé depuis son tableau de bord, puis
+    planifie un quiz technique ou un entretien virtuel.
+    \item Lors du quiz ou de l'entretien, le navigateur surveille les anomalies comportementales
+    (changements d'onglet, caméra, vérification faciale) ; les indicateurs sont intégrés au rapport.
+    \item Un rapport complet incluant les indicateurs de sécurité est généré et exportable en PDF.
+\end{enumerate}
+
+\subsection{Environnement Matériel}
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{|p{4cm}|p{9cm}|}
+\hline
+\textbf{Composant} & \textbf{Caractéristiques} \\
+\hline
+Processeur & Intel Core i7 (12\textsuperscript{e} génération) ou équivalent \\
+\hline
+Mémoire RAM & 16 Go DDR4 \\
+\hline
+Stockage & SSD 512 Go \\
+\hline
+Système d'exploitation & Windows 11 \\
+\hline
+Navigateur & Google Chrome / Microsoft Edge (support WebGL et Web Speech API requis) \\
+\hline
+\end{tabular}
+\caption{Environnement matériel}
+\label{tab:materiel}
+\end{table}
+
+% ============================================================
+\section{Architecture Globale}
+% ============================================================
+
+\subsection{Architecture Physique}
+
+L'architecture physique de TalentFlow repose sur une conteneurisation Docker de
+l'ensemble des composants, déployables sur toute infrastructure cloud :
+
+\begin{itemize}
+    \item \textbf{Conteneur Frontend :} application Vue.js 3.x servie via Nginx,
+    intégrant Three.js (rendu 3D avatar), TensorFlow.js (détection de signaux
+    comportementaux) et la Web Speech API (STT).
+
+    \item \textbf{Conteneur API .NET :} service ASP.NET Core exposant les APIs RESTful,
+    orchestrant la logique métier, l'authentification JWT et le filtrage multi-tenant ;
+    il délègue les traitements IA au microservice Python.
+
+    \item \textbf{Conteneur Service IA :} microservice Python/FastAPI gérant l'extraction
+    PDF (PyMuPDF), l'OCR Tesseract (pages scannées), le NER RoBERTa, les embeddings
+    (Sentence Transformers), le matching vectoriel (ChromaDB, FAISS), le LLM (Groq),
+    le scoring, la génération de questions, l'évaluation sémantique, la prédiction de
+    fraude et la génération des rapports.
+
+    \item \textbf{Conteneur PostgreSQL :} base de données relationnelle.
+
+    \item \textbf{Cloudinary (externe) :} service cloud de stockage des CV et médias.
+\end{itemize}
+
+\subsection{Architecture Logique}
+
+L'architecture logique de TalentFlow s'articule autour de quatre couches distinctes :
+
+\begin{itemize}
+    \item \textbf{Couche Présentation (Vue.js 3.x) :} interfaces Guest, Candidat, Expert,
+    Tenant et Admin. Intègre Three.js pour l'avatar 3D, TensorFlow.js et la vérification
+    faciale pour la détection de fraude côté client, ainsi que la Web Speech API (STT).
+    Communique avec l'API .NET via JWT.
+
+    \item \textbf{Couche Métier (API .NET) :} orchestre la logique métier, applique
+    l'isolation multi-tenant (filtrage par \texttt{TenantId} via les entités liées :
+    entreprise, expert, offre) et délègue les traitements intelligents au service Python.
+
+    \item \textbf{Couche IA (Python/FastAPI) :} expose des endpoints REST pour l'extraction
+    PyMuPDF, l'OCR Tesseract, le NER RoBERTa, les embeddings Sentence Transformers,
+    le matching ChromaDB/FAISS, le résumé et le raisonnement via Groq, le scoring composite,
+    la génération de questions, l'évaluation sémantique des réponses, la prédiction de
+    fraude et la génération des rapports JSON.
+
+    \item \textbf{Couche Données (PostgreSQL + Cloudinary) :} persistance relationnelle
+    avec isolation logique par tenant ; médias hébergés sur Cloudinary.
+\end{itemize}
+
+TalentFlow adopte le modèle \textbf{base de données partagée, schéma partagé}, avec
+isolation logique par tenant : les entités métier (\texttt{Entreprise}, \texttt{Expert},
+\texttt{OffreEmploi}, etc.) sont rattachées à un tenant via des clés étrangères
+(\texttt{TenantId} ou chaîne offre $\rightarrow$ entreprise $\rightarrow$ tenant).
+L'API .NET applique ce filtrage dans les services et contrôleurs à partir des claims JWT.
+
+% ============================================================
+\section{Sprint Backlog Général de Notre Application}
+% ============================================================
+
+La planification du projet a été réalisée en \textbf{8 sprints} (Sprint 0 à Sprint 7).
+Le tableau~\ref{tab:sprints} résume le découpage et les objectifs de chaque sprint.
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{|c|p{9cm}|c|c|}
+\hline
+\textbf{Sprint} & \textbf{Objectifs} & \textbf{Début} & \textbf{Fin} \\
+\hline
+Sprint 0 & Apprentissage technologique, design system et maquettes UI/UX, modélisation
+UML, schéma de base de données PostgreSQL, conception de l'architecture SaaS multi-tenant. & [Date] & [Date] \\
+\hline
+Sprint 1 & Infrastructure multi-tenant, gestion des utilisateurs et des rôles
+(Admin, Tenant, Expert, Candidat), espace administrateur. & [Date] & [Date] \\
+\hline
+Sprint 2 & Espace tenant : gestion des membres (\texttt{Expert}), des entreprises
+(\texttt{Entreprise}) et des \texttt{TenantProfile}. & [Date] & [Date] \\
+\hline
+Sprint 3 & Module de gestion des offres : création, personnalisation des
+\texttt{FormulaireCandidature} et \texttt{ChampPersonnalise}, publication et
+génération de liens publics tokenisés (\texttt{PublicToken}). & [Date] & [Date] \\
+\hline
+Sprint 4 & Interface publique des offres, dépôt de candidature, upload CV (Cloudinary),
+espace candidat (\texttt{CandidateProfile}, \texttt{SavedJob}), suivi du pipeline. & [Date] & [Date] \\
+\hline
+Sprint 5 & Pipeline IA : extraction PDF (PyMuPDF), OCR Tesseract (zones scannées),
+NER RoBERTa, similarité Sentence Transformers, matching ChromaDB/FAISS, résumé et
+scoring LLM (Groq), persistance dans \texttt{AnalyseCV}. & [Date] & [Date] \\
+\hline
+Sprint 6 & Quiz IA (\texttt{Quiz}, \texttt{QuizResult}), assignation experts
+(\texttt{AssignationExpert}), avis experts (\texttt{AvisExpert}), génération
+de rapports, export PDF / Excel / Word. & [Date] & [Date] \\
+\hline
+Sprint 7 & Entretien virtuel (avatar 3D, TTS/STT, lip-sync), évaluation sémantique,
+détection de fraude pour quiz et entretiens (\texttt{EntretienIA}),
+planification, Docker et CI/CD (GitHub Actions). & [Date] & [Date] \\
+\hline
+\end{tabular}
+\caption{Sprint Backlog général de TalentFlow}
+\label{tab:sprints}
+\end{table}
+
+% TODO : Insérer le diagramme de Gantt.
+% \begin{figure}[h]
+%     \centering
+%     \includegraphics[width=\textwidth]{images/gantt.png}
+%     \caption{Diagramme de Gantt du projet}
+%     \label{fig:gantt}
+% \end{figure}
+
+\section*{Conclusion}
+
+Ce chapitre a permis de formaliser l'ensemble des exigences de TalentFlow. L'identification
+des cinq acteurs humains et de l'acteur système AI Service a structuré l'analyse des
+besoins fonctionnels. Le diagramme de cas d'utilisation global, le backlog du produit
+et le diagramme de classes ont formalisé ces besoins en cohérence avec le modèle de données.
+L'environnement de travail détaillé présente les technologies (dont Sentence Transformers,
+ChromaDB, FAISS et Groq pour le pipeline de matching et de scoring), outils logiciels
+et matériels retenus. L'architecture globale — physique et logique — a posé les fondations techniques
+de la plateforme, avec le sprint backlog général structurant le développement en huit
+itérations. Les chapitres suivants présenteront la réalisation concrète de TalentFlow,
+sprint par sprint.

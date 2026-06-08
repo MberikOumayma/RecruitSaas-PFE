@@ -1,0 +1,33 @@
+@startuml Sprint2_UseCase
+skinparam shadowing false
+skinparam packageStyle rectangle
+title Cas d'utilisation — Sprint 2\nEspace recruteur et experts
+
+actor "Tenant\n(Recruteur)" as Tenant
+actor "Expert\n(Membre RH)" as Expert
+
+rectangle "TalentFlow — Sprint 2" {
+  package "Espace tenant" #E8F4FC {
+    usecase (Consulter le\ntableau de bord) as UC1
+    usecase (Gérer les\nentreprises) as UC2
+    usecase (Configurer le profil\ntenant) as UC3
+  }
+  package "Experts RH" #E8FCE8 {
+    usecase (Inviter un expert) as UC4
+    usecase (Gérer l'équipe) as UC5
+    usecase (Consulter candidatures\nassignées) as UC6
+    usecase (Planifier entretiens) as UC7
+  }
+}
+
+Tenant --> UC1
+Tenant --> UC2
+Tenant --> UC3
+Tenant --> UC4
+Tenant --> UC5
+
+Expert -up-|> Tenant
+Expert --> UC6
+Expert --> UC7
+
+@enduml

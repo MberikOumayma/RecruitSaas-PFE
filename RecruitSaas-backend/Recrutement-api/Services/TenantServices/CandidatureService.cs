@@ -1,0 +1,371 @@
+using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Recrutement_api.Data;
+using Recrutement_api.DTOs.Candidature;
+using Recrutement_api.Models;
+using Recrutement_api.DTOs.Candidate;
+using Recrutement_api.Services.CandidateServices;
+using Recrutement_api.Services.Interfaces;
+
+namespace Recrutement_api.Services.TenantServices
+{
+    public class CandidatureService
+    {
+        public const float AutoDeclineScoreThreshold = 60f;
+        private static readonly string[] ProtectedStatuts = { "Refusée", "Acceptée" };
+
+        private readonly ApplicationDbContext _context;
+        private readonly ICurrentUserService _currentUser;
+        private readonly CandidateProfileService _profileService;
+        private readonly NotificationService _notificationService;
+        private readonly ILogger<CandidatureService> _logger;
+
+        public CandidatureService(
+            ApplicationDbContext context,
+            ICurrentUserService currentUser,
+            CandidateProfileService profileService,
+            NotificationService notificationService,
+            ILogger<CandidatureService> logger)
+        {
+            _context        = context;
+            _currentUser    = currentUser;
+            _profileService = profileService;
+            _notificationService = notificationService;
+            _logger              = logger;
+        }
+
+        /// <summary>
+        /// Score IA &lt; 60 % → statut Refusée (sauf Acceptée / déjà Refusée).
+        /// </summary>
+        public async Task<(string Statut, bool AutoDeclined)> ApplyAutoDeclineIfNeededAsync(
+            Guid candidatureId, float score)
+        {
+            var candidature = await _context.Candidatures
+                .Include(c => c.Candidat)
+                .ThenInclude(ca => ca!.Utilisateur)
+                .Include(c => c.Offre)
+                .FirstOrDefaultAsync(c => c.Id == candidatureId);
+
+            if (candidature == null)
+                return ("", false);
+
+            if (!ShouldAutoDecline(score, candidature.Statut))
+                return (candidature.Statut, false);
+
+            var ancienStatut = candidature.Statut;
+            candidature.Statut = "Refusée";
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[AutoDecline] SaveChanges failed for {Id}, trying ExecuteUpdate", candidatureId);
+                await _context.Candidatures
+                    .Where(c => c.Id == candidatureId)
+                    .ExecuteUpdateAsync(s => s.SetProperty(c => c.Statut, "Refusée"));
+            }
+
+            await SendStatutChangeSideEffectsAsync(candidature, ancienStatut, "Refusée");
+
+            _logger.LogInformation(
+                "[AutoDecline] Candidature {Id} → Refusée (score {Score} < {Threshold})",
+                candidatureId, score, AutoDeclineScoreThreshold);
+
+            return ("Refusée", true);
+        }
+
+        private static bool ShouldAutoDecline(float score, string? statut)
+        {
+            if (score >= AutoDeclineScoreThreshold)
+                return false;
+            var s = (statut ?? "").Trim();
+            return !ProtectedStatuts.Any(p =>
+                string.Equals(p, s, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private async Task BackfillAutoDeclinesForTenantAsync(Guid tenantId)
+        {
+            var candidates = await _context.Candidatures
+                .Where(c => c.Offre.Entreprise.TenantId == tenantId
+                    && c.AnalyseCV != null
+                    && c.AnalyseCV.Score < AutoDeclineScoreThreshold)
+                .Select(c => new { c.Id, Score = c.AnalyseCV!.Score, c.Statut })
+                .ToListAsync();
+
+            foreach (var c in candidates)
+            {
+                if (ShouldAutoDecline(c.Score ?? 0f, c.Statut))
+                    await ApplyAutoDeclineIfNeededAsync(c.Id, c.Score ?? 0f);
+            }
+        }
+
+        private async Task SendStatutChangeSideEffectsAsync(
+            Candidature candidature, string ancienStatut, string nouveauStatut)
+        {
+            if (ancienStatut == nouveauStatut)
+                return;
+
+            try
+            {
+                if (candidature.Candidat != null)
+                {
+                    await _notificationService.NotifyStatutChangeAsync(
+                        candidatId:    candidature.Candidat.Id,
+                        candidatureId: candidature.Id,
+                        offreTitre:    candidature.Offre?.Titre ?? "Unknown Position",
+                        nouveauStatut: nouveauStatut,
+                        offreId:       candidature.Offre?.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[AutoDecline] Candidate notification failed for {Id}", candidature.Id);
+            }
+
+            try
+            {
+                var expertsAssignes = await _context.AssignationsExperts
+                    .Where(a => a.OffreId == candidature.OffreId)
+                    .Select(a => a.ExpertId)
+                    .ToListAsync();
+
+                var nom = candidature.Candidat?.Utilisateur != null
+                    ? $"{candidature.Candidat.Utilisateur.Prenom} {candidature.Candidat.Utilisateur.Nom}".Trim()
+                    : "A candidate";
+
+                foreach (var expId in expertsAssignes)
+                {
+                    _context.Notifications.Add(new Notification
+                    {
+                        ExpertId   = expId,
+                        Type       = "status_updates",
+                        Title      = "Candidate status updated",
+                        Body       = $"{nom}'s application for \"{candidature.Offre?.Titre}\" is now \"{nouveauStatut}\"",
+                        OffreId    = candidature.OffreId,
+                        CandidatId = candidature.Id,
+                        CreeLe     = DateTime.UtcNow,
+                        Read       = false,
+                    });
+                }
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[AutoDecline] Expert notifications failed for {Id}", candidature.Id);
+            }
+        }
+
+        // ── Profil candidat (collègue) ────────────────────────────────────────
+        public async Task<(bool Success, string Message, CandidateProfileDto? Data)>
+            GetCandidateProfileForTenantCandidatureAsync(Guid candidatureId)
+        {
+            var tenantId = _currentUser.TenantId;
+
+            var candidature = await _context.Candidatures
+                .AsNoTracking()
+                .Include(c => c.Offre).ThenInclude(o => o!.Entreprise)
+                .FirstOrDefaultAsync(c => c.Id == candidatureId);
+
+            if (candidature == null)
+                return (false, "Candidature introuvable.", null);
+
+            if (candidature.Offre?.Entreprise == null ||
+                candidature.Offre.Entreprise.TenantId != tenantId)
+                return (false, "Non autorisé.", null);
+
+            var userId = await _context.Candidats
+                .AsNoTracking()
+                .Where(c => c.Id == candidature.CandidatId)
+                .Select(c => c.UtilisateurId)
+                .FirstOrDefaultAsync();
+
+            if (userId == Guid.Empty)
+                return (false, "Candidat introuvable.", null);
+
+            return await _profileService.GetProfileAsync(userId);
+        }
+
+        // ── Liste candidatures (avec offreId du collègue + CvUrl) ─────────────
+        public async Task<List<CandidatureResponseDto>> GetCandidaturesAsync(
+            Guid? entrepriseId, string? nomOffre, string? statut,
+            int? scoreMin, int? scoreMax, DateTime? dateDebut, DateTime? dateFin,
+            Guid? offreId = null)
+        {
+            var tenantId = _currentUser.TenantId;
+            if (tenantId.HasValue)
+                await BackfillAutoDeclinesForTenantAsync(tenantId.Value);
+
+            var query = _context.Candidatures
+                .Where(c => c.Offre.Entreprise.TenantId == tenantId)
+                .AsQueryable();
+
+            if (offreId.HasValue)
+                query = query.Where(c => c.OffreId == offreId.Value);
+            if (entrepriseId.HasValue)
+                query = query.Where(c => c.Offre.EntrepriseId == entrepriseId.Value);
+            if (!string.IsNullOrWhiteSpace(nomOffre))
+                query = query.Where(c => EF.Functions.Like(c.Offre.Titre, $"%{nomOffre}%"));
+            if (!string.IsNullOrWhiteSpace(statut))
+                query = query.Where(c => c.Statut == statut);
+            if (dateDebut.HasValue)
+                query = query.Where(c => c.CreeLe >= dateDebut.Value);
+            if (dateFin.HasValue)
+                query = query.Where(c => c.CreeLe <= dateFin.Value.AddDays(1));
+            if (scoreMin.HasValue)
+                query = query.Where(c => c.AnalyseCV != null && c.AnalyseCV.Score >= scoreMin.Value);
+            if (scoreMax.HasValue)
+                query = query.Where(c => c.AnalyseCV != null && c.AnalyseCV.Score <= scoreMax.Value);
+
+            return await (
+                from c in query
+                join p in _context.CandidateProfiles.AsNoTracking()
+                    on c.CandidatId equals p.CandidatId into profileJoin
+                from p in profileJoin.DefaultIfEmpty()
+                orderby c.CreeLe descending
+                select new CandidatureResponseDto
+                {
+                    Id            = c.Id,
+                    NomCandidat   = c.Candidat.Utilisateur.Nom,
+                    EmailCandidat = c.Candidat.Utilisateur.Email,
+                    AvatarUrl     = p != null ? p.AvatarUrl : null,
+                    OffreId       = c.OffreId,
+                    TitreOffre    = c.Offre.Titre,
+                    EntrepriseId  = c.Offre.EntrepriseId,
+                    NomEntreprise = c.Offre.Entreprise.Nom,
+                    Statut        = c.Statut,
+                    CreeLe        = c.CreeLe,
+                    CvUrl         = c.CvUrl,
+                    ScoreIA       = c.AnalyseCV != null ? c.AnalyseCV.Score : null
+                })
+                .ToListAsync();
+        }
+
+        public async Task<CandidatureStatsDto> GetStatsAsync()
+        {
+            var tenantId = _currentUser.TenantId;
+            var all = await _context.Candidatures
+                .Where(c => c.Offre.Entreprise.TenantId == tenantId)
+                .Select(c => new { c.Statut, Score = c.AnalyseCV != null ? c.AnalyseCV.Score : null })
+                .ToListAsync();
+
+            var scores = all.Where(x => x.Score.HasValue).Select(x => x.Score!.Value).ToList();
+
+            return new CandidatureStatsDto
+            {
+                Total        = all.Count,
+                EnAttente    = all.Count(x => x.Statut == "Nouvelle" || x.Statut == "En cours"),
+                Acceptees    = all.Count(x => x.Statut == "Acceptée"),
+                Refusees     = all.Count(x => x.Statut == "Refusée"),
+                ScoreMoyenIA = scores.Any() ? (float?)scores.Average() : null
+            };
+        }
+
+        public async Task<object?> GetCandidatureByIdAsync(Guid id)
+        {
+            var candidature = await _context.Candidatures
+                .Include(c => c.Offre)
+                .ThenInclude(o => o.Entreprise)
+                .Include(c => c.Candidat)
+                .ThenInclude(ca => ca.Utilisateur)
+                .Include(c => c.AnalyseCV)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (candidature == null) return null;
+
+            if (candidature.AnalyseCV?.Score is float aiScore)
+            {
+                var (newStatut, _) = await ApplyAutoDeclineIfNeededAsync(id, aiScore);
+                if (!string.IsNullOrWhiteSpace(newStatut))
+                    candidature.Statut = newStatut;
+            }
+
+            object? parsedResponses = null;
+            if (!string.IsNullOrWhiteSpace(candidature.FormulaireResponses))
+            {
+                try { parsedResponses = JsonSerializer.Deserialize<Dictionary<string, string>>(candidature.FormulaireResponses); }
+                catch { parsedResponses = candidature.FormulaireResponses; }
+            }
+
+            return new
+            {
+                candidature.Id,
+                candidature.OffreId,
+                candidature.CandidatId,
+                NomCandidat       = candidature.Candidat.Utilisateur.Nom,
+                EmailCandidat     = candidature.Candidat.Utilisateur.Email,
+                TitreOffre        = candidature.Offre.Titre,
+                NomEntreprise     = candidature.Offre.Entreprise.Nom,
+                candidature.Statut,
+                candidature.CreeLe,
+                candidature.CvUrl,
+                FormulaireResponses = parsedResponses,
+                AnalyseCV = candidature.AnalyseCV != null ? new
+                {
+                    candidature.AnalyseCV.Id,
+                    candidature.AnalyseCV.Score,
+                    candidature.AnalyseCV.Classification,
+                    candidature.AnalyseCV.Resume,
+                    candidature.AnalyseCV.Competences,
+                    candidature.AnalyseCV.Experience,
+                    candidature.AnalyseCV.Certifications
+                } : null
+            };
+        }
+
+        public async Task<List<CandidatureResponseDto>> GetMesCandidaturesDirectAsync(Guid candidatId)
+        {
+            Console.WriteLine($"[Direct] CandidatId reçu = {candidatId}");
+
+            var result = await (
+                from c in _context.Candidatures.Where(x => x.CandidatId == candidatId)
+                join p in _context.CandidateProfiles.AsNoTracking()
+                    on c.CandidatId equals p.CandidatId into profileJoin
+                from p in profileJoin.DefaultIfEmpty()
+                orderby c.CreeLe descending
+                select new CandidatureResponseDto
+                {
+                    Id            = c.Id,
+                    NomCandidat   = c.Candidat.Utilisateur.Nom,
+                    EmailCandidat = c.Candidat.Utilisateur.Email,
+                    AvatarUrl     = p != null ? p.AvatarUrl : null,
+                    OffreId       = c.OffreId,
+                    TitreOffre    = c.Offre.Titre,
+                    EntrepriseId  = c.Offre.EntrepriseId,
+                    NomEntreprise = c.Offre.Entreprise.Nom,
+                    Statut        = c.Statut,
+                    CreeLe        = c.CreeLe,
+                    CvUrl         = c.CvUrl ?? string.Empty,
+                    ScoreIA       = c.AnalyseCV != null ? c.AnalyseCV.Score : null
+                })
+                .ToListAsync();
+
+            Console.WriteLine($"[Direct] Résultats = {result.Count}");
+            return result;
+        }
+
+    
+        public async Task<object> ChangerStatutAsync(Guid candidatureId, string nouveauStatut)
+        {
+            // 1 — Charger la candidature avec toutes les relations nécessaires
+            var candidature = await _context.Candidatures
+                .Include(c => c.Candidat)       // ← pour candidatId
+                .Include(c => c.Offre)          // ← pour offreTitre + offreId
+                .FirstOrDefaultAsync(c => c.Id == candidatureId)
+                ?? throw new KeyNotFoundException("Candidature introuvable");
+
+            var ancienStatut = candidature.Statut;
+
+            candidature.Statut = nouveauStatut;
+            await _context.SaveChangesAsync();
+
+            await SendStatutChangeSideEffectsAsync(candidature, ancienStatut, nouveauStatut);
+
+            return new { id = candidature.Id, statut = nouveauStatut };
+        }
+
+      
+    }
+}

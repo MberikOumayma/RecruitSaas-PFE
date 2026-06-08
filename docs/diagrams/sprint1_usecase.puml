@@ -1,0 +1,108 @@
+@startuml Sprint1_UseCase_TalentFlow
+' Cas d'utilisation — Sprint 1 : Authentification & Multi-tenant (TalentFlow)
+' Génération : java -jar plantuml.jar -tpng -o ../images sprint1_usecase.puml
+
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  FontSize 10
+}
+skinparam actor {
+  BorderColor #1e40af
+}
+skinparam rectangle {
+  BorderColor #64748b
+  BackgroundColor #FAFAFA
+}
+
+left to right direction
+title Cas d'utilisation — Sprint 1\nAuthentification et gestion multi-tenant
+
+actor Guest as "Guest"
+actor Candidat as "Candidat"
+actor Tenant as "Tenant\n(Recruteur)"
+actor Admin as "Administrateur"
+actor OAuth as "Fournisseur\nOAuth" #999999
+
+rectangle "Système TalentFlow (Sprint 1)" {
+
+  package "Accès public" #E8F4FC {
+    usecase (Consulter la page\n d'accueil) as UC1
+    usecase (Sélectionner un rôle) as UC2
+  }
+
+  package "Inscription et authentification" #E8FCE8 {
+    usecase (S'inscrire\nCandidat) as UC3
+    usecase (S'inscrire\nTenant) as UC4
+    usecase (Se connecter) as UC5
+    usecase (Authentification\nOAuth) as UC6
+  }
+
+  package "Espace administrateur" #FCE8E8 {
+    usecase (Consulter tableau\nde bord) as UC7
+    usecase (Consulter détail\ndemande tenant) as UC8
+    usecase (Approuver\ntenant) as UC9
+    usecase (Rejeter\ntenant) as UC10
+    usecase (Lister tenants\napprouvés) as UC11
+    usecase (Consulter profil\ntenant) as UC12
+    usecase (Suspendre\ntenant) as UC13
+    usecase (Gérer profil admin) as UC14
+    usecase (Changer mot de passe) as UC15
+    usecase (Configurer\nnotifications) as UC16
+  }
+}
+
+' Guest
+Guest --> UC1
+Guest --> UC2
+Guest --> UC3
+Guest --> UC4
+Guest --> UC5
+Guest --> UC6
+
+' Candidat & Tenant héritent des accès guest (comptes authentifiés)
+Candidat -up-|> Guest
+Tenant -up-|> Guest
+
+' Admin
+Admin --> UC5
+Admin --> UC7
+Admin --> UC8
+Admin --> UC9
+Admin --> UC10
+Admin --> UC11
+Admin --> UC12
+Admin --> UC13
+Admin --> UC14
+Admin --> UC15
+Admin --> UC16
+
+' OAuth externe
+OAuth <.. UC6 : <<communication>>
+
+' Include / extend
+UC2 .> UC1 : <<extend>>
+UC3 .> UC2 : <<extend>>
+UC4 .> UC2 : <<extend>>
+UC6 .> UC5 : <<extend>>
+UC8 .> UC7 : <<extend>>
+UC9 .> UC8 : <<extend>>
+UC10 .> UC8 : <<extend>>
+UC11 .> UC7 : <<extend>>
+UC12 .> UC11 : <<extend>>
+UC13 .> UC12 : <<extend>>
+
+note bottom of UC4
+  Statut **Pending** à la création.
+  Connexion après **Approved**.
+end note
+
+note bottom of UC3
+  Compte actif immédiatement.
+  OAuth possible à l'inscription.
+end note
+
+@enduml

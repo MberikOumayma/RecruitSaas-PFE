@@ -1,0 +1,36 @@
+@startuml Sprint3_UseCase
+skinparam shadowing false
+skinparam packageStyle rectangle
+title Cas d'utilisation — Sprint 3\nGestion des offres d'emploi
+
+actor "Tenant\n(Recruteur)" as Tenant
+actor "Guest / Candidat" as Guest
+
+rectangle "TalentFlow — Sprint 3" {
+  package "Offres d'emploi" #FFF7ED {
+    usecase (Lister / filtrer\nles offres) as UC1
+    usecase (Créer / modifier\nune offre) as UC2
+    usecase (Personnaliser le\nformulaire) as UC3
+    usecase (Publier /\ndépublier) as UC4
+    usecase (Générer lien public\ntokenisé) as UC5
+    usecase (Assigner experts\nà l'offre) as UC6
+  }
+  package "Diffusion publique" #F0F9FF {
+    usecase (Consulter offre\npublique) as UC7
+  }
+}
+
+Tenant --> UC1
+Tenant --> UC2
+Tenant --> UC3
+Tenant --> UC4
+Tenant --> UC5
+Tenant --> UC6
+
+Guest --> UC7
+UC7 ..> UC5 : <<include>>
+UC3 ..> UC2 : <<include>>
+UC4 ..> UC2 : <<extend>>
+UC5 ..> UC2 : <<extend>>
+
+@enduml

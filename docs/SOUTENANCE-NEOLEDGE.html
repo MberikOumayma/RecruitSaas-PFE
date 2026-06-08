@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Soutenance PFE — TalentFlow | NeoLedge</title>
+  <style>
+    :root {
+      --neo-yellow: #f5c518;
+      --neo-yellow-dim: #c9a012;
+      --neo-black: #0a0a0a;
+      --neo-grey: #6b7280;
+      --neo-grey-light: #9ca3af;
+      --neo-white: #f9fafb;
+      --slide-w: 1280px;
+      --slide-h: 720px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      background: #111;
+      color: var(--neo-white);
+      overflow: hidden;
+    }
+    .deck { width: 100vw; height: 100vh; position: relative; }
+    .slide {
+      display: none;
+      width: var(--slide-w);
+      height: var(--slide-h);
+      max-width: 96vw;
+      max-height: 92vh;
+      margin: auto;
+      position: absolute;
+      inset: 0;
+      background: var(--neo-black);
+      border: 2px solid #222;
+      border-radius: 4px;
+      padding: 48px 56px 72px;
+      overflow: hidden;
+      flex-direction: column;
+    }
+    .slide.active { display: flex; }
+    .slide::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0;
+      width: 8px; height: 100%;
+      background: var(--neo-yellow);
+    }
+    .slide::after {
+      content: "";
+      position: absolute;
+      bottom: 24px; right: 32px;
+      width: 80px; height: 28px;
+      background: linear-gradient(90deg, var(--neo-yellow) 33%, var(--neo-black) 33%, var(--neo-black) 66%, var(--neo-grey) 66%);
+      opacity: 0.35;
+      border-radius: 2px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #222;
+    }
+    .header .brand {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: var(--neo-yellow);
+      text-transform: uppercase;
+    }
+    .header .tag {
+      font-size: 11px;
+      color: var(--neo-grey);
+      letter-spacing: 0.08em;
+    }
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 800;
+      line-height: 1.15;
+      margin-bottom: 16px;
+    }
+    h1 span { color: var(--neo-yellow); }
+    h2 {
+      font-size: 1.65rem;
+      font-weight: 700;
+      color: var(--neo-yellow);
+      margin-bottom: 20px;
+    }
+    h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--neo-yellow-dim);
+      margin: 14px 0 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    p, li {
+      font-size: 0.95rem;
+      line-height: 1.55;
+      color: var(--neo-grey-light);
+    }
+    ul { margin-left: 1.2rem; margin-top: 8px; }
+    li { margin-bottom: 6px; }
+    li strong { color: var(--neo-white); }
+    .subtitle {
+      font-size: 1.15rem;
+      color: var(--neo-grey);
+      margin-bottom: 32px;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      flex: 1;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .card {
+      background: #141414;
+      border: 1px solid #2a2a2a;
+      border-left: 4px solid var(--neo-yellow);
+      padding: 16px 18px;
+      border-radius: 4px;
+    }
+    .card h4 {
+      font-size: 0.85rem;
+      color: var(--neo-yellow);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .card p, .card li { font-size: 0.82rem; }
+    .formula {
+      background: #111;
+      border: 1px solid var(--neo-yellow-dim);
+      padding: 14px 18px;
+      font-family: "Consolas", monospace;
+      font-size: 0.85rem;
+      color: var(--neo-yellow);
+      border-radius: 4px;
+      margin: 12px 0;
+    }
+    .arch-box {
+      background: #161616;
+      border: 1px solid #333;
+      padding: 10px 14px;
+      text-align: center;
+      font-size: 0.78rem;
+      border-radius: 4px;
+    }
+    .arch-box.highlight {
+      border-color: var(--neo-yellow);
+      color: var(--neo-yellow);
+      font-weight: 700;
+    }
+    .arch-row {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin: 10px 0;
+      flex-wrap: wrap;
+    }
+    .arch-arrow {
+      text-align: center;
+      color: var(--neo-grey);
+      font-size: 1.2rem;
+      margin: 4px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      margin-top: 8px;
+    }
+    th {
+      background: var(--neo-yellow);
+      color: var(--neo-black);
+      padding: 8px 12px;
+      text-align: left;
+      font-weight: 700;
+    }
+    td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #222;
+      color: var(--neo-grey-light);
+    }
+    tr:nth-child(even) td { background: #111; }
+    .title-slide {
+      justify-content: center;
+      align-items: flex-start;
+      text-align: left;
+    }
+    .title-slide h1 { font-size: 2.8rem; }
+    .title-slide .meta {
+      margin-top: 40px;
+      font-size: 1rem;
+      color: var(--neo-grey);
+      line-height: 2;
+    }
+    .title-slide .meta strong { color: var(--neo-yellow); }
+    .step-num {
+      display: inline-block;
+      background: var(--neo-yellow);
+      color: var(--neo-black);
+      width: 28px; height: 28px;
+      line-height: 28px;
+      text-align: center;
+      font-weight: 800;
+      font-size: 0.85rem;
+      border-radius: 2px;
+      margin-right: 8px;
+    }
+    .nav {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      z-index: 100;
+      background: rgba(0,0,0,0.85);
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: 1px solid #333;
+    }
+    .nav button {
+      background: var(--neo-yellow);
+      color: var(--neo-black);
+      border: none;
+      padding: 8px 20px;
+      font-weight: 700;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    .nav button:hover { background: #ffd84d; }
+    .nav span { color: var(--neo-grey); font-size: 0.85rem; min-width: 80px; text-align: center; }
+    .badge {
+      display: inline-block;
+      background: #1a1a1a;
+      border: 1px solid var(--neo-yellow-dim);
+      color: var(--neo-yellow);
+      padding: 3px 10px;
+      font-size: 0.72rem;
+      border-radius: 3px;
+      margin: 2px;
+      font-weight: 600;
+    }
+    .content { flex: 1; overflow: auto; }
+    @media print {
+      body { overflow: visible; background: #000; }
+      .slide { display: flex !important; page-break-after: always; position: relative; margin: 0 auto 20px; }
+      .nav { display: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+<!-- SLIDE 1 -->
+<section class="slide title-slide active">
+  <div class="header"><span class="brand">NeoLedge</span><span class="tag">PFE 2026</span></div>
+  <h1>TalentFlow<br><span>Plateforme SaaS de recrutement intelligent</span></h1>
+  <p class="subtitle">IA sémantique · Avatar 3D · Traçabilité Blockchain</p>
+  <div class="meta">
+    <strong>Projet de Fin d'Études</strong><br>
+    Réalisé au sein de <strong>NeoLedge</strong><br>
+    Encadré par ESPRIT · Année universitaire 2025–2026
+  </div>
+</section>
+
+<!-- SLIDE 2 -->
+<section class="slide">
+  <div class="header"><span class="brand">NeoLedge</span><span class="tag">Plan</span></div>
+  <h2>Plan de la présentation</h2>
+  <div class="grid-2 content">
+    <ul>
+      <li>Introduction & contexte</li>
+      <li>Présentation de NeoLedge</li>
+      <li>Problématique</li>
+      <li>Étude de l'existant & limites</li>
+      <li>Solution proposée & valeur ajoutée</li>
+      <li>Besoins fonctionnels & non fonctionnels</li>
+    </ul>
+    <ul>
+      <li>Architecture du projet</li>
+      <li>Détail des modules (IA, entretien, blockchain…)</li>
+      <li>Feature Engineering & Sentence Transformers</li>
+      <li>Score · Summary · Rank FAISS</li>
+      <li>Méthodologie Scrum</li>
+      <li>Technologies & démonstration</li>
+    </ul>
+  </div>
+</section>
+
+<!-- SLIDE 3 -->
+<section class="slide">
+  <div class="header"><span class="brand">NeoLedge</span><span class="tag">Introduction</span></div>
+  <h2>Introduction</h2>
+  <div class="content">
+    <p>Dans un contexte de <strong>transformation digitale RH</strong>, les entreprises reçoivent des centaines de candidatures par offre. Le tri manuel est lent, subjectif et ne garantit pas l'alignement compétences ↔ poste.</p>
+    <br>
+    <p><strong>TalentFlow (RecruitSaaS)</strong> est une plateforme multi-tenant que j'ai développée pour automatiser et enrichir le processus de recrutement grâce à :</p>
+    <ul>
+      <li><strong>Intelligence artificielle</strong> — scoring, résumé, classement sémantique</li>
+      <li><strong>Entretien IA</strong> — avatar 3D, questions générées par LLM</li>
+      <li><strong>Blockchain</strong> — traçabilité immuable des décisions RH</li>
+      <li><strong>Multi-rôles</strong> — recruteur, candidat, expert, administrateur</li>
+    </ul>
+  </div>
+</section>
+
+<!-- SLIDE 4 -->
+<section class="slide">
+  <div class="header"><span class="brand">NeoLedge</span><span class="tag">Entreprise</span></div>
+  <h2>Présentation de NeoLedge</h2>
+  <div class="grid-2 content">
+    <div>
+      <h3>Qui sommes-nous ?</h3>
+      <p><strong>NeoLedge</strong> est une entreprise spécialisée dans le développement de <strong>solutions logicielles</strong> et la <strong>transformation digitale</strong>. L'identité visuelle — noir, jaune et gris — reflète modernité, rigueur et innovation.</p>
+      <br>
+      <h3>Domaines d'activité</h3>
+      <ul>
+        <li>Développement d'applications métier sur mesure</li>
+        <li>Solutions SaaS & ERP</li>
+        <li>Intégration de l'IA dans les processus métier</li>
+        <li>Accompagnement digital des entreprises</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>Contexte du stage PFE</h4>
+      <p>Mon projet s'inscrit dans la volonté de NeoLedge d'explorer l'<strong>IA appliquée au recrutement</strong> : réduire le temps de screening, améliorer la qualité des décisions RH et proposer une solution SaaS commercialisable.</p>
+      <br>
+      <p><strong>Objectif du stage :</strong> concevoir et implémenter une plateforme complète de recrutement intelligent, de l'architecture à la mise en production.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 5 -->
+<section class="slide">
+  <div class="header"><span class="brand">NeoLedge</span><span class="tag">Problématique</span></div>
+  <h2>Problématique</h2>
+  <div class="content">
+    <p style="font-size:1.1rem; color:var(--neo-white); margin-bottom:20px;">
+      Comment concevoir une plateforme SaaS capable d'<strong>automatiser l'évaluation des candidatures</strong>, de <strong>classer les profils par pertinence</strong> vis-à-vis d'une offre, et de <strong>garantir la traçabilité</strong> des décisions RH, tout en offrant une expérience fluide aux recruteurs et candidats ?
+    </p>
+    <div class="grid-3">
+      <div class="card"><h4>Volume</h4><p>Des dizaines à centaines de CV par offre — tri manuel impossible à scale.</p></div>
+      <div class="card"><h4>Subjectivité</h4><p>Évaluation humaine variable, biais inconscients, critères non uniformes.</p></div>
+      <div class="card"><h4>Traçabilité</h4><p>Absence de preuve immuable sur les décisions et l'intégrité des dossiers.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 6 -->
+<section class="slide">
+  <div class="header"><span class="brand">NeoLedge</span><span class="tag">État de l'art</span></div>
+  <h2>Étude de l'existant</h2>
+  <div class="content">
+    <table>
+      <tr><th>Solution</th><th>Points forts</th><th>Limites pour notre contexte</th></tr>
+      <tr><td><strong>LinkedIn Recruiter</strong></td><td>Large base, recherche par mots-clés</td><td>Coût élevé, pas de scoring IA custom, pas de blockchain</td></tr>
+      <tr><td><strong>Workday / SAP SuccessFactors</strong></td><td>Suite RH complète, enterprise</td><td>Complexe, cher, peu adapté PME/TPE tunisiennes</td></tr>
+      <tr><td><strong>Lever / Greenhouse</strong></td><td>Pipeline candidatures, UX moderne</td><td>Scoring IA limité, pas d'entretien avatar, pas multi-tenant local</td></tr>
+      <tr><td><strong>ATS open-source (OrangeHRM…)</strong></td><td>Gratuit, personnalisable</td><td>Pas d'IA sémantique, UI datée, pas de traçabilité blockchain</td></tr>
+      <tr><td><strong>Outils IA isolés (HireVue…)</strong></td><td>Vidéo-entretien, analyse</td><td>Boîte noire, pas intégré à un ATS complet, coût/license</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- SLIDE 7 -->
+<section class="slide">
+  <div class="header"><span class="brand">NeoLedge</span><span class="tag">Limites</span></div>
+  <h2>Limites identifiées</h2>
+  <div class="grid-2 content">
+    <ul>
+      <li><strong>Pas de matching sémantique</strong> — recherche par mots-clés uniquement</li>
+      <li><strong>Scoring opaque ou absent</strong> — pas de score multi-critères explicable</li>
+      <li><strong>Pas de résumé automatique</strong> candidat ↔ offre pour le recruteur</li>
+      <li><strong>Classement manuel</strong> — pas de rank automatique par offre</li>
+      <li><strong>Silos</strong> — ATS, IA et entretien vidéo dans des outils séparés</li>
+    </ul>
+    <ul>
+      <li><strong>Pas de traçabilité blockchain</strong> des décisions RH</li>
+      <li><strong>Multi-tenant absent</strong> — une instance par entreprise</li>
+      <li><strong>Pas d'avis experts</strong> intégrés au pipeline</li>
+      <li><strong>Coût & dépendance</strong> aux solutions SaaS internationales</li>
+      <li><strong>Langue</strong> — peu adaptées aux CV FR/EN mixtes (marché local)</li>
+    </ul>
+  </div>
+</section>
+
+<!-- SLIDE 8 -->
+<section class="slide">
+  <div class="header"><span class="brand">NeoLedge</span><span class="tag">Solution</span></div>
+  <h2>Solution proposée — TalentFlow</h2>
+  <div class="content">
+    <p>Une <strong>plateforme SaaS multi-tenant</strong> unifiée couvrant tout le cycle de recrutement :</p>
+    <div class="grid-3" style="margin-top:16px;">
+      <div class="card"><h4>Pipeline RH</h4><p>Offres, candidatures, statuts, équipe, rapports Excel</p></div>
+      <div class="card"><h4>Moteur IA</h4><p>Extraction CV, score 5 niveaux, résumé RH, rank FAISS</p></div>
+      <div class="card"><h4>Entretien IA</h4><p>Avatar 3D GLB, questions Groq, reconnaissance faciale</p></div>
+      <div class="card"><h4>Quiz technique</h4><p>Questions générées par IA, planification recruteur</p></div>
+      <div class="card"><h4>Experts</h4><p>Avis experts, assignation, notifications</p></div>
+      <div class="card"><h4>Blockchain</h4><p>Hash SHA-256 sur Ethereum Sepolia — CV, consentement, décisions</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 9 -->
+<section class="slide">
+  <div class="header"><span class="brand">NeoLedge</span><span class="tag">Valeur ajoutée</span></div>
+  <h2>Valeur ajoutée</h2>
+  <div class="grid-2 content">
+    <ul>
+      <li><strong>−70 % temps de screening</strong> — score + résumé + rank automatiques</li>
+      <li><strong>Scoring explicable</strong> — 5 niveaux détaillés + barres UI</li>
+      <li><strong>Auto-refus intelligent</strong> — score &lt; 60 % → statut Refusée</li>
+      <li><strong>Multilingue</strong> — MiniLM multilingue FR/EN</li>
+      <li><strong>SaaS multi-tenant</strong> — plusieurs entreprises, isolation des données</li>
+    </ul>
+    <ul>
+      <li><strong>Entretien sans humain</strong> — pré-qualification 24/7 via avatar IA</li>
+      <li><strong>Intégrité blockchain</strong> — preuve immuable anti-fraude CV</li>
+      <li><strong>Solution souveraine</strong> — hébergement & stack maîtrisés</li>
+      <li><strong>Extensible</strong> — microservices découplés (API, IA, blockchain)</li>
+      <li><strong>UX moderne</strong> — Vue 3, dashboard recruteur intuitif</li>
+    </ul>
+  </div>
+</section>
+
+<!-- SLIDE 10 -->
+<section class="slide">
+  <div class="header"><span class="brand">NeoLedge</span><span class="tag">Besoins</span></div>
+  <h2>Besoins fonctionnels</h2>
+  <div class="grid-2 content" style="font-size:0.82rem;">
+    <div>
+      <h3>Recruteur (Tenant)</h3>
+      <ul>
+        <li>CRUD offres d'emploi + formulaire personnalisé</li>
+        <li>Consulter candidatures par offre avec filtres (statut, score)</li>
+        <li>Calculer score IA, générer résumé, classer par FAISS</li>
+        <li>Pipeline statuts : Nouvelle → Entretien → Acceptée / Refusée</li>
+        <li>Export Excel, rapports KPI, gestion équipe</li>
+        <li>Planifier quiz & entretiens IA</li>
+      </ul>
+      <h3>Expert</h3>
+      <ul><li>Consulter candidats assignés, donner avis expert</li></ul>
+    </div>
+    <div>
+      <h3>Candidat</h3>
+      <ul>
+        <li>Parcourir offres, postuler avec CV</li>
+        <li>Suivre candidatures, compléter profil</li>
+        <li>Passer entretien IA (avatar 3D) & quiz technique</li>
+      </ul>
+      <h3>Administrateur</h3>
+      <ul><li>Valider demandes entreprises, gérer tenants</li></ul>
+      <h3>IA (transverse)</h3>
+      <ul>
+        <li>Extraire skills & expériences du CV</li>
+        <li>Scorer, résumer, ranker candidats vs offre</li>
+        <li>Générer questions entretien & quiz</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 11 -->
+<section class="slide">
+  <div class="header"><span class="brand">NeoLedge</span><span class="tag">Besoins</span></div>
+  <h2>Besoins non fonctionnels</h2>
+  <div class="grid-3 content">
+    <div class="card"><h4>Performance</h4><p>Rank FAISS bulk sans LLM ; embeddings singleton ; réponse API &lt; 3s (hors 1er chargement modèle)</p></div>
+    <div class="card"><h4>Sécurité</h4><p>JWT, OAuth (Google/LinkedIn/Facebook), isolation multi-tenant, CORS</p></div>
+    <div class="card"><h4>Scalabilité</h4><p>Architecture microservices, Docker Compose, CI/CD GitHub Actions</p></div>
+    <div class="card"><h4>Disponibilité</h4><p>Fallback compose_summary si Groq indisponible ; retry Groq 5 tentatives</p></div>
+    <div class="card"><h4>Maintenabilité</h4><p>Séparation Frontend / Backend / IA / Blockchain ; EF Core migrations</p></div>
+    <div class="card"><h4>Traçabilité</h4><p>Logs structurés, blockchain Sepolia, hash SHA-256 dossiers candidats</p></div>
+  </div>
+</section>
+
+<!-- SLIDE 12 -->
+<section class="slide">
+  <div class="header"><span class="brand">NeoLedge</span><span class="tag">Architecture</span></div>
+  <h2>Architecture globale</h2>
+  <div class="content">
+    <div class="arch-row">
+      <div class="arch-box highlight" style="width:200px;">Vue 3 + Vite<br><small>Port 5173</small></div>
+    </div>
+    <div class="arch-arrow">↓ REST / JWT</div>
+    <div class="arch-row">
+      <p class="arch-box highlight" style="width:280px;">ASP.NET Core API<br><small>Port 5202 · PostgreSQL · EF Core</small></div>
+    </div>
+    <div class="arch-arrow">↓ HTTP interne</div>
+    <div class="arch-row">
+      <div class="arch-box" style="width:180px;">Python FastAPI<br><small>Port 8000 · IA</small></div>
+      <div class="arch-box" style="width:180px;">Blockchain Service<br><small>Port 5155 · Nethereum</small></div>
+      <div class="arch-box" style="width:180px;">PostgreSQL 16<br><small>Port 5432</small></div>
+    </div>
+    <div class="arch-arrow">↓</div>
+    <div class="arch-row">
+      <div class="arch-box">Groq API (Llama 3.x)</div>
+      <div class="arch-box">HuggingFace (MiniLM)</div>
+      <div class="arch-box">Ethereum Sepolia</div>
+      <div class="arch-box">Cloudinary</div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 13 -->
+<section class="slide">
+  <div class="header"><span class="brand">NeoLedge</span><span class="tag">Modules</span></div>
+  <h2>Modules de la plateforme</h2>
+  <div class="grid-2 content">
+    <ul>
+      <li><strong>Auth & Multi-tenant</strong> — JWT, OAuth, gestion entreprises</li>
+      <li><strong>Offres & Candidatures</strong> — CRUD, pipeline, CV upload</li>
+      <li><strong>Extraction CV</strong> — PDF → texte (.NET) + skills/exp (Groq)</li>
+      <li><strong>Moteur IA</strong> — Score · Summary · Rank</li>
+    </ul>
+    <ul>
+      <li><strong>Entretien IA</strong> — Avatar Three.js, Groq, face-api.js</li>
+      <li><strong>Quiz technique</strong> — Génération & planification IA</li>
+      <li><strong>Experts & Avis</strong> — Assignation, notifications</li>
+      <li><strong>Blockchain</strong> — CandidateRegistry.sol, Sepolia</li>
+      <li><strong>Rapports</strong> — KPI, export Excel ClosedXML</li>
+    </ul>
+  </div>
+</section>
+
+<!-- SLIDE 14 - IA Overview -->
+<section class="slide">
+  <div class="header"><span class="brand">NeoLedge</span><span class="tag">Module IA</span></div>
+  <h2>Module IA — Vue d'ensemble</h2>
+  <div class="content">
+    <p>Microservice Python <strong>recruit-ai-service</strong> — 3 fonctionnalités principales :</p>
+    <div class="grid-3" style="margin-top:16px;">
+      <div class="card"><h4>Score</h4><p>Score 0–100 % · 5 niveaux · auto-refus &lt; 60 %</p></div>
+      <div class="card"><h4>Summary</h4><p>Briefing RH EN · forces + gaps · Groq 70B</p></div>
+      <div class="card"><h4>Rank</h4><p>Classement FAISS · tous candidats d'une offre · #1 #2 #3</p></div>
+    </div>
+    <br>
+    <p><strong>Pipeline commun :</strong> CV extrait → skills + expériences (JSON) → embeddings MiniLM → scoring / résumé / rank</p>
+    <div style="margin-top:12px;">
+      <span class="badge">Sentence Transformers</span>
+      <span class="badge">FAISS</span>
+      <span class="badge">ChromaDB</span>
+      <span class="badge">Groq Llama</span>
+      <span class="badge">NumPy</span>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 15 - Feature Engineering -->
+<section class="slide">
+  <div class="header"><span class="brand">NeoLedge</span><span class="tag">Feature Engineering</span></div>
+  <h2>Feature Engineering — Étapes</h2>
+  <div class="content">
+    <p><span class="step-num">1</span><strong>Extraction (Groq)</strong> — CV texte → <code>skills[]</code> + <code>experiences[]</code></p>
+    <p><span class="step-num">2</span><strong>Préparation</strong> — <code>_resolve_summary_inputs()</code> : normalisation, déduplication</p>
+    <p><span class="step-num">3</span><strong>Profils texte</strong> — <code>build_candidate_profile()</code> + <code>build_offer_profile()</code></p>
+    <p><span class="step-num">4</span><strong>Vectorisation</strong> — MiniLM → vecteurs 384D normalisés</p>
+    <p><span class="step-num">5</span><strong>Gap analysis</strong> — exigences offre vs corpus candidat (seuil cosine 0.55)</p>
+    <div class="formula">embedder = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")<br>similarity = cosine(emb_candidat, emb_offre)</div>
+  </div>
+</section>
+
+<!-- SLIDE 16 - Score 5 levels -->
+<section class="slide">
+  <div class="header"><span class="brand">NeoLedge</span><span class="tag">Score IA</span></div>
+  <h2>Score IA — 5 niveaux</h2>
+  <div class="content">
+    <table>
+      <tr><th>Niveau</th><th>Nom</th><th>Technologie</th><th>Poids</th></tr>
+      <tr><td>1</td><td>Semantic Score</td><td>MiniLM — cosine profil global</td><td>20 %</td></tr>
+      <tr><td>2</td><td>Skill Match</td><td>Gap analysis sémantique</td><td>30 %</td></tr>
+      <tr><td>3</td><td>Experience</td><td>Similarité par stage/projet (top-5)</td><td>15 %</td></tr>
+      <tr><td>4</td><td>LLM Reasoning</td><td>Groq llama-3.1-8b-instant</td><td>30 %</td></tr>
+      <tr><td>5</td><td>Rules</td><td>Pénalités / bonus heuristiques</td><td>5 %</td></tr>
+    </table>
+    <div class="formula">final = 0.20×semantic + 0.30×skill + 0.15×experience + 0.30×llm + 0.05×rules</div>
+    <p>Barres UI : <strong>domain_fit</strong> · <strong>technical</strong> · <strong>experience</strong> — arrondi au multiple de 5</p>
+  </div>
+</section>
+
+<!-- SLIDE 17 - Summary -->
+<section class="slide">
+  <div class="header"><span class="brand">NeoLedge</span><span class="tag">Summary</span></div>
+  <h2>AI Summary — Étapes</h2>
+  <div class="content">
+    <p><span class="step-num">1</span><code>build_summary_context()</code> — gap analysis MiniLM, fit_score, skills matchés/manquants</p>
+    <p><span class="step-num">2</span><code>_build_summary_prompt()</code> — prompt structuré avec CV skills + description offre</p>
+    <p><span class="step-num">3</span><strong>Groq llama-3.3-70b-versatile</strong> — rédaction prose RH en anglais</p>
+    <p><span class="step-num">4</span><strong>Fallback</strong> — <code>compose_summary()</code> si Groq indisponible</p>
+    <br>
+    <div class="card">
+      <h4>Format du résumé</h4>
+      <p>① « The candidate's strongest relevant skills for this role include… »<br>
+         ② « However, key missing skills that limit their fit include… »</p>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 18 - Rank -->
+<section class="slide">
+  <div class="header"><span class="brand">NeoLedge</span><span class="tag">Rank FAISS</span></div>
+  <h2>Rank candidats — FAISS</h2>
+  <div class="content">
+    <p><span class="step-num">1</span>Backend charge <strong>toutes les candidatures</strong> de l'offre + AnalyseCV</p>
+    <p><span class="step-num">2</span>Embedder profils candidats + offre (MiniLM)</p>
+    <p><span class="step-num">3</span><strong>FAISS IndexFlatIP</strong> — recherche similarité vectorielle</p>
+    <p><span class="step-num">4</span><code>compute_match_score(use_llm=False)</code> — score rapide sans Groq</p>
+    <p><span class="step-num">5</span>Tri par score → <strong>rank #1, #2, #3…</strong> + vectorSimilarity dans l'UI</p>
+    <br>
+    <p>Frontend : bouton <strong>« Rank by AI »</strong> sur <code>OfferCandidates.vue</code></p>
+  </div>
+</section>
+
+<!-- SLIDE 19 - Other modules -->
+<section class="slide">
+  <div class="header"><span class="brand">NeoLedge</span><span class="tag">Autres modules</span></div>
+  <h2>Entretien IA & Blockchain</h2>
+  <div class="grid-2 content">
+    <div class="card">
+      <h4>Entretien IA</h4>
+      <ul>
+        <li>Avatar 3D GLB (Three.js)</li>
+        <li>Questions générées par Groq selon l'offre</li>
+        <li>Synthèse vocale + reconnaissance faciale (face-api.js)</li>
+        <li>Évaluation des réponses candidat</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>Blockchain</h4>
+      <ul>
+        <li>Smart contract <code>CandidateRegistry.sol</code></li>
+        <li>Hash SHA-256 : CV, consentement, résultat entretien, décision RH</li>
+        <li>Déployé sur <strong>Ethereum Sepolia</strong></li>
+        <li>Microservice Nethereum (port 5155)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 20 - Scrum -->
+<section class="slide">
+  <div class="header"><span class="brand">NeoLedge</span><span class="tag">Méthodologie</span></div>
+  <h2>Méthodologie — Scrum</h2>
+  <div class="grid-2 content">
+    <div>
+      <h3>Cérémonies</h3>
+      <ul>
+        <li><strong>Sprint Planning</strong> — backlog priorisé avec encadrant entreprise</li>
+        <li><strong>Daily Standup</strong> — avancement, blocages</li>
+        <li><strong>Sprint Review</strong> — démo des fonctionnalités livrées</li>
+        <li><strong>Rétrospective</strong> — amélioration continue</li>
+      </ul>
+      <h3>Artefacts</h3>
+      <ul>
+        <li>Product Backlog · Sprint Backlog · Incrément</li>
+        <li>User Stories : « En tant que recruteur, je veux… »</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>Phases du projet</h4>
+      <p><strong>Sprint 1–2</strong> — Auth, multi-tenant, offres, candidatures<br>
+         <strong>Sprint 3–4</strong> — Extraction CV, score IA, UI recruteur<br>
+         <strong>Sprint 5</strong> — Summary, rank FAISS, auto-refus<br>
+         <strong>Sprint 6</strong> — Entretien IA avatar, quiz<br>
+         <strong>Sprint 7</strong> — Blockchain, rapports, tests & déploiement</p>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 21 - Technologies -->
+<section class="slide">
+  <div class="header"><span class="brand">NeoLedge</span><span class="tag">Technologies</span></div>
+  <h2>Technologies utilisées</h2>
+  <div class="content">
+    <table>
+      <tr><th>Couche</th><th>Technologies</th></tr>
+      <tr><td>Frontend</td><td>Vue 3, Vite, Vue Router, Pinia, Tailwind CSS, Axios, Three.js, Chart.js</td></tr>
+      <tr><td>Backend</td><td>ASP.NET Core .NET 10, EF Core, PostgreSQL, JWT, OAuth, Hangfire, ClosedXML</td></tr>
+      <tr><td>IA</td><td>Python FastAPI, Sentence Transformers (MiniLM-L12-v2), FAISS, ChromaDB, Groq Llama 3.x, NumPy</td></tr>
+      <tr><td>Blockchain</td><td>Solidity, Hardhat, Nethereum, Ethereum Sepolia</td></tr>
+      <tr><td>DevOps</td><td>Docker Compose, GitHub Actions CI/CD</td></tr>
+      <tr><td>Services</td><td>Cloudinary (médias), Brevo/SMTP (emails)</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- SLIDE 22 - Conclusion -->
+<section class="slide title-slide">
+  <div class="header"><span class="brand">NeoLedge</span><span class="tag">Conclusion</span></div>
+  <h1>Merci pour<br><span>votre attention</span></h1>
+  <p class="subtitle">TalentFlow — Recrutement intelligent propulsé par l'IA</p>
+  <div class="meta">
+    <strong>Questions ?</strong><br><br>
+    Démonstration live : Score · Summary · Rank by AI<br>
+    <span style="color:var(--neo-grey);">NeoLedge · ESPRIT · PFE 2026</span>
+  </div>
+</section>
+
+</div>
+
+<div class="nav">
+  <button onclick="prev()">← Préc.</button>
+  <span id="counter">1 / 22</span>
+  <button onclick="next()">Suiv. →</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  let cur = 0;
+  function show(n) {
+    slides[cur].classList.remove('active');
+    cur = (n + slides.length) % slides.length;
+    slides[cur].classList.add('active');
+    document.getElementById('counter').textContent = (cur + 1) + ' / ' + slides.length;
+  }
+  function next() { show(cur + 1); }
+  function prev() { show(cur - 1); }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') next();
+    if (e.key === 'ArrowLeft') prev();
+  });
+</script>
+</body>
+</html>

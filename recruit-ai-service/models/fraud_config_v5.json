@@ -1,0 +1,67 @@
+{
+  "optimal_threshold": 0.30999999999999994,
+  "version": "v5",
+  "reference_observations": 35,
+  "feature_names": [
+    "tab_changes",
+    "window_blurs",
+    "no_face_count",
+    "multi_face_count",
+    "face_absence_ratio",
+    "gaze_away_count",
+    "gaze_away_ratio",
+    "phone_detected",
+    "book_detected",
+    "laptop_detected",
+    "extra_person",
+    "suspicious_obj_count",
+    "answer_delay",
+    "answer_speed",
+    "frontend_fraud_score"
+  ],
+  "dataset_column_map": {
+    "tab_changes": "Changements onglet",
+    "window_blurs": "Pertes fenetre",
+    "no_face_count": "Absence visage nb",
+    "multi_face_count": "Plusieurs visages",
+    "face_absence_ratio": "Ratio absence",
+    "gaze_away_count": "Regard detourne nb",
+    "gaze_away_ratio": "Ratio regard",
+    "phone_detected": "Telephone",
+    "book_detected": "Livre",
+    "laptop_detected": "Laptop",
+    "extra_person": "Personne extra",
+    "suspicious_obj_count": "Nb objets suspects",
+    "answer_delay": "Delai reponse",
+    "answer_speed": "Vitesse reponse",
+    "frontend_fraud_score": "Score frontend"
+  },
+  "training_stats": {
+    "tab_changes": { "mean": 4.09, "std": 2.0 },
+    "window_blurs": { "mean": 3.52, "std": 1.8 },
+    "no_face_count": { "mean": 4.49, "std": 3.0 },
+    "multi_face_count": { "mean": 0.67, "std": 0.9 },
+    "face_absence_ratio": { "mean": 0.15, "std": 0.12 },
+    "gaze_away_count": { "mean": 7.6, "std": 4.5 },
+    "gaze_away_ratio": { "mean": 0.21, "std": 0.14 },
+    "phone_detected": { "mean": 0.186, "std": 0.39 },
+    "book_detected": { "mean": 0.076, "std": 0.27 },
+    "laptop_detected": { "mean": 0.0, "std": 0.0 },
+    "extra_person": { "mean": 0.11, "std": 0.31 },
+    "suspicious_obj_count": { "mean": 0.74, "std": 0.85 },
+    "answer_delay": { "mean": 2.41, "std": 1.2 },
+    "answer_speed": { "mean": 3.19, "std": 1.5 },
+    "frontend_fraud_score": { "mean": 0.44, "std": 0.18 }
+  },
+  "class_names": [
+    "NON SUSPECT",
+    "SUSPECT"
+  ],
+  "metrics": {
+    "roc_auc": 0.9833,
+    "f1": 0.9331,
+    "accuracy": 0.933,
+    "recall": 0.934,
+    "precision": 0.9321
+  }
+}

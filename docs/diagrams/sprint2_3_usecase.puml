@@ -1,0 +1,58 @@
+@startuml Sprint2_3_UseCase_TalentFlow
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+title Cas d'utilisation — Sprints 2 et 3\nEspace recruteur, experts et offres d'emploi
+
+actor "Tenant\n(Recruteur)" as Tenant
+actor "Expert\n(Membre RH)" as Expert
+actor "Candidat / Guest" as Guest
+
+rectangle "TalentFlow — Sprints 2 \& 3" {
+
+  package "Espace tenant" #E8F4FC {
+    usecase (Consulter le\ntableau de bord) as UC1
+    usecase (Gérer les\nentreprises) as UC2
+    usecase (Configurer le profil\ntenant / société) as UC3
+  }
+
+  package "Gestion des experts" #E8FCE8 {
+    usecase (Inviter un expert) as UC4
+    usecase (Gérer l'équipe RH) as UC5
+    usecase (Assigner un expert\nà une offre) as UC6
+  }
+
+  package "Gestion des offres" #FFF7ED {
+    usecase (Créer / modifier\nune offre) as UC7
+    usecase (Personnaliser le\nformulaire candidature) as UC8
+    usecase (Publier / dépublier\nune offre) as UC9
+    usecase (Générer lien public\ntokenisé) as UC10
+    usecase (Consulter offre\npublique) as UC11
+  }
+}
+
+Tenant --> UC1
+Tenant --> UC2
+Tenant --> UC3
+Tenant --> UC4
+Tenant --> UC5
+Tenant --> UC6
+Tenant --> UC7
+Tenant --> UC8
+Tenant --> UC9
+Tenant --> UC10
+
+Expert -up-|> Tenant
+Expert --> UC1
+Expert --> UC6
+
+Guest --> UC11
+UC11 ..> UC10 : <<include>>
+
+UC7 ..> UC8 : <<include>>
+UC9 ..> UC7 : <<extend>>
+UC10 ..> UC8 : <<extend>>
+UC6 ..> UC7 : <<extend>>
+
+@enduml

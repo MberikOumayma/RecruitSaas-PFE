@@ -1,0 +1,22 @@
+# Secrets
+recruit-ai-service/.env
+RecruitSaas-backend/Recrutement-api/appsettings.Development.json
+RecruitSaas-backend/Recrutement-api/appsettings.Local.json
+RecruitSaas-backend/Recrutement-api/appsettings.SocialAuth.json
+RecruitSaas-backend/Recrutement-api/appsettings.Production.json
+
+# ML models (too large for GitHub — keep locally)
+recruit-ai-service/models/cv_ner_roberta_best/
+
+# Python
+__pycache__/
+*.pyc
+recruit-ai-service/chroma_db/
+
+# Node
+node_modules/
+RecruitSaas-frontend/dist/
+
+# .NET
+**/bin/
+**/obj/
