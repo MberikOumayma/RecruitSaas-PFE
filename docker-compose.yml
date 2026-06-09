@@ -1,0 +1,78 @@
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: recruitsaas-db
+    environment:
+      POSTGRES_DB: RecruitmentDb_main
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d RecruitmentDb_main"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - recruitsaas-net
+
+  ai-service:
+    build:
+      context: ./recruit-ai-service
+      dockerfile: Dockerfile
+    container_name: recruitsaas-ai
+    env_file:
+      - ./recruit-ai-service/.env
+    ports:
+      - "8000:8000"
+    volumes:
+      # Modèle NER local (~500 Mo) — non versionné sur GitHub
+      - ./recruit-ai-service/models/cv_ner_roberta_best:/app/models/cv_ner_roberta_best:ro
+    networks:
+      - recruitsaas-net
+
+  backend:
+    build:
+      context: ./RecruitSaas-backend/Recrutement-api
+      dockerfile: Dockerfile
+    container_name: recruitsaas-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
+    ports:
+      - "5202:5202"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:5202
+      APPLY_MIGRATIONS: "true"
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=RecruitmentDb_main;Username=postgres;Password=${POSTGRES_PASSWORD:-postgres}
+      AiService__BaseUrl: http://ai-service:8000
+      Frontend__Url: http://localhost:8888
+    networks:
+      - recruitsaas-net
+
+  frontend:
+    build:
+      context: ./RecruitSaas-frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_ORIGIN: http://localhost:5202
+    container_name: recruitsaas-frontend
+    depends_on:
+      - backend
+    ports:
+      - "8888:80"
+    networks:
+      - recruitsaas-net
+
+networks:
+  recruitsaas-net:
+    driver: bridge
+
+volumes:
+  postgres_data:

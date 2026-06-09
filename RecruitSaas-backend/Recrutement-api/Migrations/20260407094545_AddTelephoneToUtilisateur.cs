@@ -10,20 +10,12 @@ namespace Recrutement_api.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "Telephone",
-                table: "Utilisateurs",
-                type: "text",
-                nullable: false,
-                defaultValue: "");
+            // Colonne incluse dans InitialCreate (ordre des migrations corrigé pour Docker)
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "Telephone",
-                table: "Utilisateurs");
         }
     }
 }

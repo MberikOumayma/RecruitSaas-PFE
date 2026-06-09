@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Recrutement_api.Data;
 using Recrutement_api.Models;
@@ -30,7 +31,7 @@ namespace Recrutement_api.Services.AI
         private readonly HttpClient _httpClient;
         private readonly ILogger<AiOrchestratorService> _logger;
 
-        private readonly string _aiBaseUrl = "http://127.0.0.1:8000/ai";
+        private readonly string _aiBaseUrl;
 
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
@@ -44,7 +45,8 @@ namespace Recrutement_api.Services.AI
             CandidatureService candidatureService,
             ICurrentUserService currentUser,
             HttpClient httpClient,
-            ILogger<AiOrchestratorService> logger)
+            ILogger<AiOrchestratorService> logger,
+            IConfiguration configuration)
         {
             _dbContext            = dbContext;
             _cvExtractionService  = cvExtractionService;
@@ -52,6 +54,8 @@ namespace Recrutement_api.Services.AI
             _currentUser          = currentUser;
             _httpClient           = httpClient;
             _logger               = logger;
+            var baseUrl = configuration["AiService:BaseUrl"]?.TrimEnd('/') ?? "http://127.0.0.1:8000";
+            _aiBaseUrl = $"{baseUrl}/ai";
         }
 
         private async Task<AnalyseCV> EnsureTextExtractedAsync(Guid candidatureId)

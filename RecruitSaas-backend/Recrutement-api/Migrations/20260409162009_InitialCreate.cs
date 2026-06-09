@@ -10,7 +10,7 @@ namespace Recrutement_api.Migrations
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
-        {/*
+        {
             migrationBuilder.CreateTable(
                 name: "Utilisateurs",
                 columns: table => new
@@ -22,6 +22,7 @@ namespace Recrutement_api.Migrations
                     Nom = table.Column<string>(type: "text", nullable: false),
                     Role = table.Column<string>(type: "text", nullable: false),
                     EstActif = table.Column<bool>(type: "boolean", nullable: false),
+                    Telephone = table.Column<string>(type: "text", nullable: true),
                     CreeLe = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -167,6 +168,7 @@ namespace Recrutement_api.Migrations
                     IsInvited = table.Column<bool>(type: "boolean", nullable: false),
                     TemporaryPassword = table.Column<string>(type: "text", nullable: true),
                     Poste = table.Column<string>(type: "text", nullable: true),
+                    Phone = table.Column<string>(type: "text", nullable: true),
                     CreeLe = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Role = table.Column<string>(type: "text", nullable: false),
                     Status = table.Column<string>(type: "text", nullable: false),
@@ -526,7 +528,6 @@ namespace Recrutement_api.Migrations
                 table: "Utilisateurs",
                 column: "Email",
                 unique: true);
-            */
         }
 
         /// <inheritdoc />

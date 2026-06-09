@@ -1,7 +1,9 @@
 import axios from "axios"
 
+const API_ORIGIN = import.meta.env.VITE_API_ORIGIN || "http://localhost:5202"
+
 const api = axios.create({
-  baseURL: "http://localhost:5202/api", // adapte ton port
+  baseURL: `${API_ORIGIN}/api`,
 })
 api.interceptors.request.use(
   (config) => {

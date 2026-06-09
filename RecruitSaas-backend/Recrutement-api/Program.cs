@@ -38,15 +38,23 @@ builder.Services.AddHttpClient<Recrutement_api.Services.CvExtraction.AiCvTextExt
 builder.Services.AddScoped<Recrutement_api.Services.CvExtraction.ICvExtractionService, Recrutement_api.Services.CvExtraction.CvExtractionService>();
 
 // CORS
+var corsOrigins = new List<string>
+{
+    "http://localhost:5173",
+    "http://localhost:8080",
+    "http://localhost:8081",
+    "http://localhost:8888",
+    "http://localhost:3000",
+    "https://localhost:5173"
+};
+var frontendUrl = builder.Configuration["Frontend:Url"];
+if (!string.IsNullOrWhiteSpace(frontendUrl) && !corsOrigins.Contains(frontendUrl))
+    corsOrigins.Add(frontendUrl);
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
-        policy.WithOrigins(
-            "http://localhost:5173",
-            "http://localhost:8080",
-            "http://localhost:3000",
-            "https://localhost:5173"
-        )
+        policy.WithOrigins(corsOrigins.ToArray())
         .AllowAnyHeader()
         .AllowAnyMethod()
         .AllowCredentials()
@@ -130,6 +138,12 @@ builder.Services.AddScoped<Recrutement_api.Services.TenantServices.ReportService
 // ✅ CORRECTION : builder.Build() doit être appelé ICI, après tous les services
 var app = builder.Build();
 
+if (string.Equals(builder.Configuration["APPLY_MIGRATIONS"], "true", StringComparison.OrdinalIgnoreCase))
+{
+    using var scope = app.Services.CreateScope();
+    scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.Migrate();
+}
+
 // Swagger
 if (app.Environment.IsDevelopment())
 {
@@ -159,7 +173,7 @@ app.UseStaticFiles(new StaticFileOptions
         if (!path.EndsWith(".jpg") && !path.EndsWith(".jpeg") && !path.EndsWith(".png") && !path.EndsWith(".webp") && !path.EndsWith(".jfif"))
             return;
         var origin = ctx.Context.Request.Headers.Origin.ToString();
-        if (origin is "http://localhost:5173" or "http://localhost:8080" or "http://localhost:3000")
+        if (origin is "http://localhost:5173" or "http://localhost:8080" or "http://localhost:8081" or "http://localhost:8888" or "http://localhost:3000")
             ctx.Context.Response.Headers["Access-Control-Allow-Origin"] = origin;
     }
 });
@@ -178,3 +192,5 @@ app.MapGet("/health", () => Results.Ok(new
 app.MapControllers();
 
 app.Run();
+
+public partial class Program { }
