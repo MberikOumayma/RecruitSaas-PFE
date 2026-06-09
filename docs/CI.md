@@ -42,6 +42,8 @@ Test inclus : `HealthEndpointTests.GetHealth_ReturnsHealthyStatus`
 
 ### 3.2 Frontend (Vue 3 + Vite)
 
+`package-lock.json` doit être versionné (requis par `npm ci` en CI).
+
 ```yaml
 working-directory: RecruitSaas-frontend
 npm ci

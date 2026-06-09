@@ -22,20 +22,8 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
-      - name: Restore
-        run: dotnet restore
-        working-directory: RecruitSaas-backend/Recrutement-api
-
-      - name: Build
-        run: dotnet build --no-restore -c Release
-        working-directory: RecruitSaas-backend/Recrutement-api
-
-      - name: Restore tests
-        run: dotnet restore
-        working-directory: RecruitSaas-backend/Recrutement-api.Tests
-
-      - name: Test
-        run: dotnet test --no-restore -c Release --verbosity normal
+      - name: Restore, build & test
+        run: dotnet test -c Release --verbosity normal
         working-directory: RecruitSaas-backend/Recrutement-api.Tests
         env:
           APPLY_MIGRATIONS: "false"
