@@ -27,8 +27,13 @@ builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("Emai
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
-);
+{
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    if (builder.Environment.IsEnvironment("Testing"))
+        options.UseSqlite(connectionString);
+    else
+        options.UseNpgsql(connectionString);
+});
 
 // CV Extraction
 builder.Services.AddHttpClient();

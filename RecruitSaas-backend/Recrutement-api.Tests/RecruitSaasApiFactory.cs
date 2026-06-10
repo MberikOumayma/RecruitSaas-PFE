@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,30 +10,19 @@ namespace Recrutement_api.Tests;
 
 public class RecruitSaasApiFactory : WebApplicationFactory<Program>
 {
+    private const string SharedSqliteConnectionString =
+        "Data Source=RecruitSaasTestDb;Mode=Memory;Cache=Shared";
+
     private SqliteConnection? _connection;
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseSetting("APPLY_MIGRATIONS", "false");
-        builder.UseEnvironment("Development");
+        builder.UseEnvironment("Testing");
+        builder.UseSetting("ConnectionStrings:DefaultConnection", SharedSqliteConnectionString);
 
-        _connection = new SqliteConnection("DataSource=:memory:");
+        _connection = new SqliteConnection(SharedSqliteConnectionString);
         _connection.Open();
-
-        builder.ConfigureTestServices(services =>
-        {
-            var descriptors = services
-                .Where(d =>
-                    d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>) ||
-                    d.ServiceType == typeof(ApplicationDbContext))
-                .ToList();
-
-            foreach (var descriptor in descriptors)
-                services.Remove(descriptor);
-
-            services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlite(_connection));
-        });
     }
 
     protected override IHost CreateHost(IHostBuilder builder)
