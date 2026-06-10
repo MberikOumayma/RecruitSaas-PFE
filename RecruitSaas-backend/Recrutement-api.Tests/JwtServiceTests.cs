@@ -57,11 +57,9 @@ public class JwtServiceTests
             Role = RoleUtilisateur.Candidat
         };
 
-        var before = DateTime.UtcNow.AddHours(2.9);
         var token = CreateService().GenerateToken(user, candidatId: Guid.NewGuid());
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
-        var after = DateTime.UtcNow.AddHours(3.1);
 
-        Assert.InRange(jwt.ValidTo, before, after);
+        Assert.InRange((jwt.ValidTo - DateTime.UtcNow).TotalHours, 2.5, 3.5);
     }
 }

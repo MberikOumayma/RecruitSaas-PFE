@@ -10,8 +10,11 @@ public class AuthServicePasswordTests
 {
     private static AuthService CreateService()
     {
+        var connection = new Microsoft.Data.Sqlite.SqliteConnection("DataSource=:memory:");
+        connection.Open();
+
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .UseSqlite(connection)
             .Options;
 
         var config = new ConfigurationBuilder()
@@ -24,6 +27,7 @@ public class AuthServicePasswordTests
             .Build();
 
         var context = new ApplicationDbContext(options);
+        context.Database.EnsureCreated();
         var jwtService = new JwtService(config);
         return new AuthService(context, jwtService);
     }
