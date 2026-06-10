@@ -1,6 +1,6 @@
 # Intégration continue (CI) — GitHub Actions
 
-Pipeline CI pour **RecruitSaas / TalentFlow** : vérifie automatiquement que le code compile et que les images Docker se construisent à chaque push sur `main`.
+Pipeline CI pour **RecruitSaas / TalentFlow** : tests unitaires, tests API, lint frontend, coverage, intégration multi-services et build Docker.
 
 ---
 
@@ -8,162 +8,129 @@ Pipeline CI pour **RecruitSaas / TalentFlow** : vérifie automatiquement que le 
 
 **Emplacement :** `.github/workflows/ci.yml`
 
-**Déclencheurs :**
-- Push sur la branche `main`
-- Pull Request vers `main`
+**Déclencheurs :** push / PR sur `main`
 
 ---
 
 ## 2. Jobs exécutés
 
-| Job | Action | Durée estimée |
-|-----|--------|---------------|
-| `build-backend` | `dotnet build` + **xUnit** (`/health`) | ~3 min |
-| `build-frontend` | `npm ci` + `npm run build` | ~3 min |
-| `build-ai` | `pip install` + **pytest** (`GET /`) | ~10–20 min |
-| `docker-build` | `docker build` × 3 (backend, frontend, IA) | ~30–60 min |
-
-Le job **docker-build** ne démarre que si les 3 builds précédents réussissent.
+| Job | Niveau | Action |
+|-----|--------|--------|
+| `build-backend` | Correct + Très bon | xUnit (unitaires + API + intégration) + **coverage** |
+| `build-frontend` | Correct + Très bon | **ESLint** + `npm run build` |
+| `build-ai` | Correct + Excellent | pytest (validation + sanity) + **coverage** |
+| `integration` | Excellent | **docker compose** postgres + backend + IA |
+| `docker-build` | Correct | `docker build` × 3 |
 
 ---
 
-## 3. Détail des jobs
+## 3. Tests backend (`RecruitSaas-backend/Recrutement-api.Tests/`)
 
-### 3.1 Backend (.NET 10)
+### Tests unitaires
+| Fichier | Ce qui est testé |
+|---------|------------------|
+| `JwtServiceTests` | Génération JWT, claims, expiration |
+| `AuthServicePasswordTests` | Hash / verify (Identity + BCrypt) |
+| `CvFileTypeDetectorTests` | Détection PDF/PNG/Cloudinary |
+| `LinkGeneratorServiceTests` | Génération lien offre publique |
+| `ExternalAuthExtensionsTests` | Providers OAuth configurés |
 
-**Projet de tests :** `RecruitSaas-backend/Recrutement-api.Tests/` (xUnit + `WebApplicationFactory`)
+### Tests API / intégration (InMemory DB)
+| Fichier | Ce qui est testé |
+|---------|------------------|
+| `HealthEndpointTests` | `GET /health` |
+| `AuthApiTests` | register, login, providers, `/me` |
+| `ProtectedEndpointTests` | endpoints protégés → 401 sans token |
 
-```yaml
-dotnet build   # Recrutement-api
-dotnet test    # Recrutement-api.Tests — vérifie GET /health → Healthy
-```
+**Coverage :** Coverlet → artefact `coverage-backend` (Cobertura + OpenCover)
 
-Test inclus : `HealthEndpointTests.GetHealth_ReturnsHealthyStatus`
+---
 
-### 3.2 Frontend (Vue 3 + Vite)
+## 4. Tests service IA (`recruit-ai-service/tests/`)
 
-`package-lock.json` doit être versionné (requis par `npm ci` en CI).
+| Fichier | Tests |
+|---------|-------|
+| `test_health.py` | `GET /` |
+| `test_openapi.py` | `/openapi.json`, `/docs` |
+| `test_api_validation.py` | validation 400, evaluate-answer sans LLM, summarize fallback |
+| `test_sanity_helpers.py` | `stable_seed`, `clean_cv_text`, `parse_json_array` |
 
-```yaml
-working-directory: RecruitSaas-frontend
-npm ci
-npm run build   # avec VITE_API_ORIGIN=http://localhost:5202
-```
+**18 tests** — sans modèle NER ni clé Groq réelle.
 
-### 3.3 Service IA (Python 3.12)
+**Coverage :** pytest-cov → artefact `coverage-ai` (`coverage.xml`)
 
-**Tests :** `recruit-ai-service/tests/test_health.py` (pytest + FastAPI TestClient)
+---
 
-```yaml
-pip install -r requirements.txt -r requirements-dev.txt
-pytest tests/ -v    # vérifie GET / → status ok
-```
-
-Variable CI : `GROQ_API_KEY=test-key-for-ci` (requis au démarrage de `main.py`).
-
-### 3.4 Docker Build
-
-Construit les 3 images **sans les pousser** (vérification des Dockerfiles uniquement) :
+## 5. Frontend
 
 ```bash
-docker build -t recruitsaas-backend:ci ./RecruitSaas-backend/Recrutement-api
-docker build --build-arg VITE_API_ORIGIN=http://localhost:5202 -t recruitsaas-frontend:ci ./RecruitSaas-frontend
-docker build -t recruitsaas-ai:ci ./recruit-ai-service
+npm ci
+npm run lint    # ESLint (eslint.config.js)
+npm run build
 ```
 
-Timeout du job : **120 minutes** (PyTorch + dépendances IA).
+`package-lock.json` doit être versionné.
 
 ---
 
-## 4. Mettre en place sur GitHub
+## 6. Intégration multi-services
 
-### 4.1 Committer et pousser le workflow
+**Fichiers :** `docker-compose.ci.yml`, `.github/scripts/ci-integration.sh`
 
-```powershell
-cd "C:\Users\Oumaima\OneDrive - ESPRIT\Bureau\appliPFE26"
-git add .github/workflows/ci.yml docs/CI.md
-git commit -m "Add GitHub Actions CI pipeline"
-git push origin main
-```
-
-### 4.2 Voir les résultats
-
-1. Ouvrir https://github.com/MberikOumayma/RecruitSaas-PFE
-2. Onglet **Actions**
-3. Cliquer sur le workflow **CI** en cours ou terminé
-4. Vérifier que les 4 jobs sont **verts** ✓
+1. Démarre PostgreSQL + backend + service IA
+2. Attend les healthchecks
+3. Vérifie `/health` (backend) et `/` (IA) depuis l'hôte
+4. Vérifie la connectivité **backend ↔ IA** sur le réseau Docker
 
 ---
 
-## 5. Schéma du pipeline
+## 7. Schéma du pipeline
 
 ```
 Push / PR sur main
         │
         ├── build-backend   ──┐
-        ├── build-frontend  ──┼──▶ docker-build
+        ├── build-frontend  ──┼──▶ integration ──▶ docker-build
         └── build-ai        ──┘
-                                    (si les 3 OK)
 ```
 
 ---
 
-## 6. Démo soutenance
-
-**Phrase :**
-
-> « À chaque push sur GitHub, la pipeline CI compile le backend .NET, le frontend Vue, installe les dépendances Python du service IA, puis vérifie que les trois Dockerfiles se construisent correctement. »
-
-**À montrer :**
-1. Fichier `.github/workflows/ci.yml` dans le repo
-2. Onglet **Actions** GitHub avec runs réussis (captures d'écran)
-3. Détail d'un job (logs `dotnet build`, `npm run build`, etc.)
-
----
-
-## 7. Tests automatisés
-
-| Composant | Framework | Fichiers | Couverture actuelle |
-|-----------|-----------|----------|---------------------|
-| Backend | xUnit | `Recrutement-api.Tests/HealthEndpointTests.cs` | Endpoint `/health` |
-| Service IA | pytest | `recruit-ai-service/tests/test_health.py` | Endpoint `/` |
-| Frontend | — | *(aucun)* | Pas de Vitest/Jest configuré |
-
-> Le frontend est validé par **`npm run build`** (compilation). Des tests unitaires Vue pourront être ajoutés plus tard avec Vitest.
-
-### Lancer les tests en local
+## 8. Lancer en local
 
 ```powershell
-# Backend
+# Backend + coverage
 cd RecruitSaas-backend/Recrutement-api.Tests
-dotnet test
+$env:APPLY_MIGRATIONS="false"
+dotnet test -c Release
 
-# Service IA
+# Service IA + coverage
 cd recruit-ai-service
 pip install -r requirements.txt -r requirements-dev.txt
-$env:GROQ_API_KEY="test-key"
-pytest tests/ -v
+$env:GROQ_API_KEY="test-key-for-ci"
+pytest tests/ -v --cov=. --cov-report=term-missing
+
+# Frontend lint + build
+cd RecruitSaas-frontend
+npm ci
+npm run lint
+npm run build
+
+# Intégration multi-services
+bash .github/scripts/ci-integration.sh
 ```
 
 ---
 
-## 8. Limites actuelles
+## 9. Grille PFE
 
-| Élément | Statut |
-|---------|--------|
-| Build automatique | ✅ Oui |
-| Tests backend + IA | ✅ Oui (health checks) |
-| Tests frontend unitaires | ❌ Non |
-| Push images Docker (GHCR) | ❌ Non (étape CD suivante) |
-| Déploiement cloud | ❌ Non (hébergement local) |
+| Niveau | Critères | Statut |
+|--------|----------|--------|
+| **Correct** | Tests backend, Python, build frontend, docker build | ✅ |
+| **Très bon** | Tests API, lint frontend, intégration | ✅ |
+| **Excellent** | Sanity checks IA, coverage, multi-services | ✅ |
 
----
-
-## 9. Prochaine étape (CD partiel)
-
-- Push des images vers **GitHub Container Registry (GHCR)**
-- Déclenchement sur tag ou push `main`
-- Toujours sans serveur de production (images prêtes à déployer)
+**Non inclus (optionnel) :** Vitest frontend, tests E2E Playwright, push GHCR.
 
 ---
 

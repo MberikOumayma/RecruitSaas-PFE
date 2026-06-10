@@ -1,19 +1,15 @@
 using System.Net;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
 namespace Recrutement_api.Tests;
 
-public class HealthEndpointTests : IClassFixture<WebApplicationFactory<Program>>
+public class HealthEndpointTests : IClassFixture<RecruitSaasApiFactory>
 {
     private readonly HttpClient _client;
 
-    public HealthEndpointTests(WebApplicationFactory<Program> factory)
+    public HealthEndpointTests(RecruitSaasApiFactory factory)
     {
-        _client = factory.WithWebHostBuilder(builder =>
-        {
-            builder.UseSetting("APPLY_MIGRATIONS", "false");
-        }).CreateClient();
+        _client = factory.CreateClient();
     }
 
     [Fact]

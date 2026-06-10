@@ -1,0 +1,65 @@
+# Stack minimale pour tests d'intégration CI (sans frontend, sans volume NER)
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: RecruitmentDb_main
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d RecruitmentDb_main"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - ci-net
+
+  ai-service:
+    build:
+      context: ./recruit-ai-service
+      dockerfile: Dockerfile
+    environment:
+      GROQ_API_KEY: test-key-for-ci
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/')\""]
+      interval: 10s
+      timeout: 10s
+      retries: 18
+      start_period: 60s
+    networks:
+      - ci-net
+
+  backend:
+    build:
+      context: ./RecruitSaas-backend/Recrutement-api
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+    ports:
+      - "5202:5202"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:5202
+      APPLY_MIGRATIONS: "true"
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=RecruitmentDb_main;Username=postgres;Password=postgres
+      AiService__BaseUrl: http://ai-service:8000
+      Frontend__Url: http://localhost:8888
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:5202/health || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 18
+      start_period: 60s
+    networks:
+      - ci-net
+
+networks:
+  ci-net:
+    name: recruitsaas-ci-net
+    driver: bridge
