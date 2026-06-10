@@ -6,7 +6,8 @@ using Xunit;
 
 namespace Recrutement_api.Tests;
 
-public class AuthApiTests : IClassFixture<RecruitSaasApiFactory>
+[Collection("Integration")]
+public class AuthApiTests
 {
     private readonly RecruitSaasApiFactory _factory;
     private readonly HttpClient _client;

@@ -3,7 +3,8 @@ using Xunit;
 
 namespace Recrutement_api.Tests;
 
-public class ProtectedEndpointTests : IClassFixture<RecruitSaasApiFactory>
+[Collection("Integration")]
+public class ProtectedEndpointTests
 {
     private readonly HttpClient _client;
 

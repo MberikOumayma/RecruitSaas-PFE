@@ -3,7 +3,8 @@ using Xunit;
 
 namespace Recrutement_api.Tests;
 
-public class HealthEndpointTests : IClassFixture<RecruitSaasApiFactory>
+[Collection("Integration")]
+public class HealthEndpointTests
 {
     private readonly HttpClient _client;
 
